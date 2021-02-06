@@ -6,5 +6,5 @@ setuptools.setup(
     author="Martin Fleischmann",
     author_email="martin@martinfleischmann.net",
     python_requires=">=3.6",
-    install_requires=["geopandas", "geopatra"],
+    install_requires=["geopandas", "folium"],
 )
