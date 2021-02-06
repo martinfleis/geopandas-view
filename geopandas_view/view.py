@@ -12,6 +12,7 @@ def view(
     m=None,  # folium.Map is usually referred to as `m` instead of `ax` in the case of matplotlib
     tiles="OpenStreetMap",  # Map tileset to use
     tooltip=10,  # Specify fields for tooltip, defaults to 10 first columns
+    popup=None,  # Show a different popup for each feature by passing a GeoJsonPopup object.
     categorical=False,
     legend=False,
     scheme=None,
@@ -48,13 +49,23 @@ def view(
             m=m,
             map_kwds=map_kwds,
             tooltip=tooltip,
+            popup=popup,
             **kwargs,
         )
     # else:
     #     return _choropleth(df, **kwargs)
 
 
-def _simple(gdf, color=None, style_kwds={}, m=None, map_kwds={}, tooltip=None, **kwds):
+def _simple(
+    gdf,
+    color=None,
+    style_kwds={},
+    m=None,
+    map_kwds={},
+    tooltip=None,
+    popup=None,
+    **kwds,
+):
     """
     Plot a simple single-color map with tooltip.
 
@@ -96,17 +107,8 @@ def _simple(gdf, color=None, style_kwds={}, m=None, map_kwds={}, tooltip=None, *
         m = folium.Map(location=location, control_scale=True, **map_kwds)
 
     # specify fields to show in the tooltip
-    if tooltip is False or tooltip is None or tooltip == 0:
-        tooltip = None
-    else:
-        if tooltip == "all":
-            fields = gdf.columns.drop(gdf.geometry.name).to_list()
-        elif isinstance(tooltip, int):
-            fields = gdf.columns.drop(gdf.geometry.name).to_list()[:tooltip]
-        else:
-            fields = tooltip
-
-        tooltip = folium.GeoJsonTooltip(fields)
+    tooltip = _get_info("tooltip", tooltip, gdf)
+    popup = _get_info("popup", popup, gdf)
 
     # specify color
     if color is not None:
@@ -124,7 +126,11 @@ def _simple(gdf, color=None, style_kwds={}, m=None, map_kwds={}, tooltip=None, *
 
     # add dataframe to map
     folium.GeoJson(
-        gdf.__geo_interface__, tooltip=tooltip, style_function=style_function, **kwds,
+        gdf.__geo_interface__,
+        tooltip=tooltip,
+        popup=popup,
+        style_function=style_function,
+        **kwds,
     ).add_to(m)
 
     # fit bounds to get a proper zoom level
@@ -132,3 +138,20 @@ def _simple(gdf, color=None, style_kwds={}, m=None, map_kwds={}, tooltip=None, *
 
     return m
 
+
+def _get_info(type, fields, gdf):
+    """get tooltip or popup"""
+    # specify fields to show in the tooltip
+    if fields is False or fields is None or fields == 0:
+        tooltip = None
+    else:
+        if fields == "all":
+            fields = gdf.columns.drop(gdf.geometry.name).to_list()
+        elif isinstance(fields, int):
+            fields = gdf.columns.drop(gdf.geometry.name).to_list()[:fields]
+
+    if type == "tooltip":
+        return folium.GeoJsonTooltip(fields)
+    elif type == "popup":
+        return folium.GeoJsonPopup(fields)
+    return None
