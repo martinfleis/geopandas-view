@@ -33,6 +33,7 @@ def view(
 ):
     """Proof of a concept of GeoDataFrame.view()
     """
+    # TODO: folium.LayerControl()
 
     if not df.crs.equals(4326):
         df = df.to_crs(4326)
@@ -42,40 +43,55 @@ def view(
     map_kwds["width"] = width
     map_kwds["height"] = height
 
+    gdf = df.copy()
+
+    # Get bounds to specify location and map extent
+    bounds = gdf.total_bounds
+    location = map_kwds.pop("location", None)
+    if location is None:
+        x = mean([bounds[0], bounds[2]])
+        y = mean([bounds[1], bounds[3]])
+        location = (y, x)
+
+    # create folium.Map object
+    if m is None:
+        new_m = True
+        m = folium.Map(location=location, control_scale=True, **map_kwds)
+    else:
+        new_m = False
+
     if column is None:
-        return _simple(
-            df,
+        _simple(
+            m,
+            gdf,
             color=color,
             style_kwds=style_kwds,
-            m=m,
             map_kwds=map_kwds,
             tooltip=tooltip,
             popup=popup,
             **kwargs,
         )
     else:
-        return _choropleth(
-            df,
+        _choropleth(
+            m,
+            gdf,
             column=column,
             cmap=cmap,
             bins=k,
             scheme=scheme,
             style_kwds=style_kwds,
-            m=m,
             map_kwds=map_kwds,
             **kwargs,
         )
 
+    # fit bounds to get a proper zoom level
+    m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+
+    return m
+
 
 def _simple(
-    gdf,
-    color=None,
-    style_kwds={},
-    m=None,
-    map_kwds={},
-    tooltip=None,
-    popup=None,
-    **kwds,
+    m, gdf, color=None, style_kwds={}, map_kwds={}, tooltip=None, popup=None, **kwds,
 ):
     """
     Plot a simple single-color map with tooltip.
@@ -103,20 +119,6 @@ def _simple(
     """
     # TODO: field names must be string
     # TODO: wrap custom markers
-
-    gdf = gdf.copy()
-
-    # Get bounds to specify location and map extent
-    bounds = gdf.total_bounds
-    location = map_kwds.pop("location", None)
-    if location is None:
-        x = mean([bounds[0], bounds[2]])
-        y = mean([bounds[1], bounds[3]])
-        location = (y, x)
-
-    # create folium.Map object
-    if m is None:
-        m = folium.Map(location=location, control_scale=True, **map_kwds)
 
     if isinstance(gdf, gpd.GeoDataFrame):
         # specify fields to show in the tooltip
@@ -152,18 +154,13 @@ def _simple(
         gdf, tooltip=tooltip, popup=popup, style_function=style_function, **kwds,
     ).add_to(m)
 
-    # fit bounds to get a proper zoom level
-    m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
-
-    return m
-
 
 def _choropleth(
+    m,
     gdf,
     column=None,
     cmap=None,
     style_kwds={},
-    m=None,
     map_kwds={},
     tooltip=None,
     popup=None,
@@ -172,21 +169,8 @@ def _choropleth(
     **kwds,
 ):
 
-    gdf = gdf.copy()
     gdf["__folium_key"] = range(len(gdf))
     geom = gdf.geometry.name
-
-    # Get bounds to specify location and map extent
-    bounds = gdf.total_bounds
-    location = map_kwds.pop("location", None)
-    if location is None:
-        x = mean([bounds[0], bounds[2]])
-        y = mean([bounds[1], bounds[3]])
-        location = (y, x)
-
-    # create folium.Map object
-    if m is None:
-        m = folium.Map(location=location, control_scale=True, **map_kwds)
 
     # get bins
     if scheme is not None:
@@ -202,17 +186,13 @@ def _choropleth(
         legend_name=column,
         fill_color=cmap,
         bins=bins,
+        name=column,
         **kwds,
     )
     choro.geojson.add_child(_tooltip_popup("tooltip", [column], gdf, labels=False))
     choro.geojson.add_child(_tooltip_popup("popup", 10, gdf, labels=True))
 
     choro.add_to(m)
-
-    # fit bounds to get a proper zoom level
-    m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
-
-    return m
 
 
 def _tooltip_popup(type, fields, gdf, labels=True):
