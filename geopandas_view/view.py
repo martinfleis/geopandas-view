@@ -1,6 +1,7 @@
 from statistics import mean
 
 import folium
+import pandas as pd
 
 
 def view(df, column=None, **kwargs):
@@ -12,9 +13,11 @@ def view(df, column=None, **kwargs):
 
     if column is None:
         return _simple(df, **kwargs)
+    # else:
+    #     return _choropleth(df, **kwargs)
 
 
-def _simple(gdf, color=None, style={}, m=None, map_kwds={}, **kwds):
+def _simple(gdf, color=None, style_kwds={}, m=None, map_kwds={}, **kwds):
     """
     Plot a simple single-color map with tooltip.
 
@@ -40,7 +43,8 @@ def _simple(gdf, color=None, style={}, m=None, map_kwds={}, **kwds):
         Folium map instance
     """
     # TODO: field names must be string
-    # TODO: take care about color
+
+    gdf = gdf.copy()
 
     bounds = gdf.total_bounds
 
@@ -54,12 +58,25 @@ def _simple(gdf, color=None, style={}, m=None, map_kwds={}, **kwds):
     if m is None:
         m = folium.Map(location=location, control_scale=True, **map_kwds)
 
+    if color is not None:
+        if isinstance(color, str) and color in gdf.columns:
+            folium_color = color
+        elif pd.api.types.is_list_like(color):
+            gdf["__folium_color"] = color
+            folium_color = "__folium_color"
+        else:
+            gdf["__folium_color"] = [color] * len(gdf)
+            folium_color = "__folium_color"
+
     fields = kwds.pop("fields", gdf.columns.drop(gdf.geometry.name).to_list()[:10])
     if fields == "all":
         fields = gdf.columns.drop(gdf.geometry.name).to_list()
 
     folium.GeoJson(
-        gdf.__geo_interface__, tooltip=folium.GeoJsonTooltip(fields=fields, **kwds),
+        gdf.__geo_interface__,
+        tooltip=folium.GeoJsonTooltip(fields=fields),
+        style_function=lambda x: {"color": x["properties"][folium_color], **style_kwds},
+        **kwds
     ).add_to(m)
 
     m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
