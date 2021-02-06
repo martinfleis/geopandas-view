@@ -6,6 +6,28 @@ import geopandas as gpd
 import mapclassify
 import numpy as np
 
+_BRANCA_COLORS = [
+    "red",
+    "blue",
+    "green",
+    "purple",
+    "orange",
+    "darkred",
+    "lightred",
+    "beige",
+    "darkblue",
+    "darkgreen",
+    "cadetblue",
+    "darkpurple",
+    "white",
+    "pink",
+    "lightblue",
+    "lightgreen",
+    "gray",
+    "black",
+    "lightgray",
+]
+
 
 def view(
     df,
@@ -33,7 +55,7 @@ def view(
 ):
     """Proof of a concept of GeoDataFrame.view()
     """
-    # TODO: folium.LayerControl()
+    # TODO: folium.LayerControl() - works only after all layers are in
 
     if not df.crs.equals(4326):
         df = df.to_crs(4326)
@@ -55,12 +77,25 @@ def view(
 
     # create folium.Map object
     if m is None:
-        new_m = True
         m = folium.Map(location=location, control_scale=True, **map_kwds)
-    else:
-        new_m = False
 
-    if column is None:
+    if column is not None:
+        if pd.api.types.is_categorical_dtype(gdf[column]):
+            categorical = True
+        elif gdf[column].dtype is np.dtype("O"):
+            categorical = True
+
+    if categorical:
+        cat = pd.Categorical(gdf[column])
+        if len(cat.categories) > len(_BRANCA_COLORS):
+            color = np.take(
+                _BRANCA_COLORS * (len(cat.categories) // len(_BRANCA_COLORS) + 1),
+                cat.codes,
+            )
+        else:
+            color = np.take(_BRANCA_COLORS, cat.codes)
+
+    if column is None or categorical:
         _simple(
             m,
             gdf,
