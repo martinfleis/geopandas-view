@@ -2,6 +2,7 @@ from statistics import mean
 
 import folium
 import pandas as pd
+import geopandas as gpd
 
 
 def view(
@@ -91,6 +92,7 @@ def _simple(
         Folium map instance
     """
     # TODO: field names must be string
+    # TODO: wrap custom markers
 
     gdf = gdf.copy()
 
@@ -106,15 +108,26 @@ def _simple(
     if m is None:
         m = folium.Map(location=location, control_scale=True, **map_kwds)
 
-    # specify fields to show in the tooltip
-    tooltip = _get_info("tooltip", tooltip, gdf)
-    popup = _get_info("popup", popup, gdf)
+    if isinstance(gdf, gpd.GeoDataFrame):
+        # specify fields to show in the tooltip
+        tooltip = _get_info("tooltip", tooltip, gdf)
+        popup = _get_info("popup", popup, gdf)
+    else:
+        tooltip = None
+        popup = None
 
     # specify color
     if color is not None:
-        if isinstance(color, str) and color in gdf.columns:  # use existing column
+        if (
+            isinstance(color, str)
+            and isinstance(gdf, gpd.GeoDataFrame)
+            and color in gdf.columns
+        ):  # use existing column
             style_function = lambda x: {"color": x["properties"][color], **style_kwds}
         else:  # assign new column
+            if isinstance(gdf, gpd.GeoSeries):
+                gdf = gpd.GeoDataFrame(geometry=gdf)
+
             gdf["__folium_color"] = color
 
             style_function = lambda x: {
@@ -126,11 +139,7 @@ def _simple(
 
     # add dataframe to map
     folium.GeoJson(
-        gdf.__geo_interface__,
-        tooltip=tooltip,
-        popup=popup,
-        style_function=style_function,
-        **kwds,
+        gdf, tooltip=tooltip, popup=popup, style_function=style_function, **kwds,
     ).add_to(m)
 
     # fit bounds to get a proper zoom level
@@ -143,7 +152,7 @@ def _get_info(type, fields, gdf):
     """get tooltip or popup"""
     # specify fields to show in the tooltip
     if fields is False or fields is None or fields == 0:
-        tooltip = None
+        return None
     else:
         if fields == "all":
             fields = gdf.columns.drop(gdf.geometry.name).to_list()
@@ -154,4 +163,3 @@ def _get_info(type, fields, gdf):
         return folium.GeoJsonTooltip(fields)
     elif type == "popup":
         return folium.GeoJsonPopup(fields)
-    return None
