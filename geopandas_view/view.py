@@ -3,6 +3,8 @@ from statistics import mean
 import folium
 import pandas as pd
 import geopandas as gpd
+import mapclassify
+import numpy as np
 
 
 def view(
@@ -15,12 +17,10 @@ def view(
     tooltip=10,  # Specify fields for tooltip, defaults to 10 first columns
     popup=None,  # Show a different popup for each feature by passing a GeoJsonPopup object.
     categorical=False,
-    legend=False,
     scheme=None,
     k=5,
     vmin=None,
     vmax=None,
-    markersize=None,
     width="100%",  # where matplotlib uses `figsize`, folium normally use width and height
     height="100%",  # where matplotlib uses `figsize`, folium normally use width and height
     legend_kwds=None,
@@ -53,8 +53,18 @@ def view(
             popup=popup,
             **kwargs,
         )
-    # else:
-    #     return _choropleth(df, **kwargs)
+    else:
+        return _choropleth(
+            df,
+            column=column,
+            cmap=cmap,
+            bins=k,
+            scheme=scheme,
+            style_kwds=style_kwds,
+            m=m,
+            map_kwds=map_kwds,
+            **kwargs,
+        )
 
 
 def _simple(
@@ -110,8 +120,8 @@ def _simple(
 
     if isinstance(gdf, gpd.GeoDataFrame):
         # specify fields to show in the tooltip
-        tooltip = _get_info("tooltip", tooltip, gdf)
-        popup = _get_info("popup", popup, gdf)
+        tooltip = _tooltip_popup("tooltip", tooltip, gdf)
+        popup = _tooltip_popup("popup", popup, gdf)
     else:
         tooltip = None
         popup = None
@@ -148,7 +158,64 @@ def _simple(
     return m
 
 
-def _get_info(type, fields, gdf):
+def _choropleth(
+    gdf,
+    column=None,
+    cmap=None,
+    style_kwds={},
+    m=None,
+    map_kwds={},
+    tooltip=None,
+    popup=None,
+    bins=5,
+    scheme=None,
+    **kwds,
+):
+
+    gdf = gdf.copy()
+    gdf["__folium_key"] = range(len(gdf))
+    geom = gdf.geometry.name
+
+    # Get bounds to specify location and map extent
+    bounds = gdf.total_bounds
+    location = map_kwds.pop("location", None)
+    if location is None:
+        x = mean([bounds[0], bounds[2]])
+        y = mean([bounds[1], bounds[3]])
+        location = (y, x)
+
+    # create folium.Map object
+    if m is None:
+        m = folium.Map(location=location, control_scale=True, **map_kwds)
+
+    # get bins
+    if scheme is not None:
+        binning = mapclassify.classify(np.asarray(gdf[column]), scheme, k=bins)
+        bins = binning.bins.tolist()
+        bins.insert(0, gdf[column].min())
+
+    choro = folium.Choropleth(
+        gdf,
+        data=gdf[["__folium_key", column]],
+        key_on="feature.properties.__folium_key",
+        columns=["__folium_key", column],
+        legend_name=column,
+        fill_color=cmap,
+        bins=bins,
+        **kwds,
+    )
+    choro.geojson.add_child(_tooltip_popup("tooltip", [column], gdf, labels=False))
+    choro.geojson.add_child(_tooltip_popup("popup", 10, gdf, labels=True))
+
+    choro.add_to(m)
+
+    # fit bounds to get a proper zoom level
+    m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+
+    return m
+
+
+def _tooltip_popup(type, fields, gdf, labels=True):
     """get tooltip or popup"""
     # specify fields to show in the tooltip
     if fields is False or fields is None or fields == 0:
@@ -159,7 +226,10 @@ def _get_info(type, fields, gdf):
         elif isinstance(fields, int):
             fields = gdf.columns.drop(gdf.geometry.name).to_list()[:fields]
 
+    if "__folium_key" in fields:
+        fields.remove("__folium_key")
+
     if type == "tooltip":
-        return folium.GeoJsonTooltip(fields)
+        return folium.GeoJsonTooltip(fields, labels=labels)
     elif type == "popup":
-        return folium.GeoJsonPopup(fields)
+        return folium.GeoJsonPopup(fields, labels=labels)
