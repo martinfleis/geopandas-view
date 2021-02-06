@@ -60,25 +60,25 @@ def view(
     column=None,
     cmap=None,
     color=None,
-    m=None,  # folium.Map is usually referred to as `m` instead of `ax` in the case of matplotlib
-    tiles="OpenStreetMap",  # Map tileset to use
-    attr=None,  # attribution for custom tiles
-    tooltip=10,  # Specify fields for tooltip, defaults to 10 first columns
-    popup=None,  # Show a different popup for each feature by passing a GeoJsonPopup object.
+    m=None,
+    tiles="OpenStreetMap",
+    attr=None,
+    tooltip=10,
+    popup=None,
     categorical=False,
     scheme=None,
     k=5,
     vmin=None,
     vmax=None,
-    width="100%",  # where matplotlib uses `figsize`, folium normally use width and height
-    height="100%",  # where matplotlib uses `figsize`, folium normally use width and height
+    width="100%",
+    height="100%",
     categories=None,
     classification_kwds=None,
     missing_kwds=None,
     control_scale=True,
     crs="EPSG3857",
-    style_kwds={},  # Additional style to be passed to folium style_function
-    **kwargs,  # Keyword arguments to pass to relevant folium class, e.g. `folium.GeoJson`
+    style_kwds={},
+    **kwargs,
 ):
     """Interactive map based on GeoPandas and folium/leaflet.js
 
