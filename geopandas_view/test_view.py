@@ -1,5 +1,8 @@
 import geopandas as gpd
+import pandas as pd
 from geopandas_view import view
+
+from .view import _BRANCA_COLORS
 
 nybb = gpd.read_file(gpd.datasets.get_path("nybb"))
 world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
@@ -178,6 +181,15 @@ def test_categorical():
     assert '"color":"red"' in out_str
     assert '"color":"blue"' in out_str
     assert '"color":"purple"' in out_str
+
+    # pandas.Categorical
+    df = world.copy()
+    df["categorical"] = pd.Categorical(df["name"])
+    m = view(df, column="categorical")
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    for c in _BRANCA_COLORS:
+        assert f'"color":"{c}"' in out_str
 
 
 def test_no_crs():
