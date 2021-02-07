@@ -198,6 +198,8 @@ def view(
     # TODO: folium.LayerControl() - works only after all layers are in
 
     gdf = df.copy()
+    # Cast column names to str
+    gdf.columns = gdf.columns.astype(str)
 
     if gdf.crs is None:
         crs = "Simple"
@@ -253,7 +255,6 @@ def view(
             gdf,
             color=color,
             style_kwds=style_kwds,
-            map_kwds=map_kwds,
             tooltip=tooltip,
             popup=popup,
             **kwargs,
@@ -267,7 +268,6 @@ def view(
             bins=k,
             scheme=scheme,
             style_kwds=style_kwds,
-            map_kwds=map_kwds,
             classification_kwds=classification_kwds,
             **kwargs,
         )
