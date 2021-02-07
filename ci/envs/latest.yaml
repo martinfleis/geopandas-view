@@ -1,0 +1,10 @@
+name: test
+channels:
+  - conda-forge
+dependencies:
+  - geopandas
+  - folium
+  - maplassify
+  - pytest
+  - pytest-cov
+  - codecov
