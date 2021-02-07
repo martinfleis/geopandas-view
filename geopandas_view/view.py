@@ -253,7 +253,6 @@ def view(
             gdf,
             color=color,
             style_kwds=style_kwds,
-            map_kwds=map_kwds,
             tooltip=tooltip,
             popup=popup,
             **kwargs,
@@ -267,7 +266,6 @@ def view(
             bins=k,
             scheme=scheme,
             style_kwds=style_kwds,
-            map_kwds=map_kwds,
             classification_kwds=classification_kwds,
             **kwargs,
         )
@@ -456,6 +454,8 @@ def _tooltip_popup(type, fields, gdf, labels=True):
     if "__folium_key" in fields:
         fields.remove("__folium_key")
 
+    # Cast fields to str
+    fields = list(map(str, fields))
     if type == "tooltip":
         return folium.GeoJsonTooltip(fields, labels=labels)
     elif type == "popup":
