@@ -198,8 +198,6 @@ def view(
     # TODO: folium.LayerControl() - works only after all layers are in
 
     gdf = df.copy()
-    # Cast column names to str
-    gdf.columns = gdf.columns.astype(str)
 
     if gdf.crs is None:
         crs = "Simple"
@@ -456,6 +454,8 @@ def _tooltip_popup(type, fields, gdf, labels=True):
     if "__folium_key" in fields:
         fields.remove("__folium_key")
 
+    # Cast fields to str
+    fields = list(map(str, fields))
     if type == "tooltip":
         return folium.GeoJsonTooltip(fields, labels=labels)
     elif type == "popup":
