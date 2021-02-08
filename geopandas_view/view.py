@@ -340,7 +340,11 @@ def _simple(
 
     # add dataframe to map
     folium.GeoJson(
-        gdf, tooltip=tooltip, popup=popup, style_function=style_function, **kwds,
+        gdf.__geo_interface__,
+        tooltip=tooltip,
+        popup=popup,
+        style_function=style_function,
+        **kwds,
     ).add_to(m)
 
 
@@ -422,7 +426,7 @@ def _choropleth(
         bins.insert(0, gdf[column].min())
 
     choro = folium.Choropleth(
-        gdf,
+        gdf.__geo_interface__,
         data=gdf[["__folium_key", column]],
         key_on="feature.properties.__folium_key",
         columns=["__folium_key", column],
