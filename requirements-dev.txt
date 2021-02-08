@@ -1,0 +1,6 @@
+geopandas
+folium
+mapclassify
+pytest
+pytest-cov
+codecov
