@@ -1,5 +1,6 @@
 import geopandas as gpd
 import pandas as pd
+import pytest
 from geopandas_view import view
 
 from .view import _BRANCA_COLORS
@@ -25,7 +26,10 @@ def test_choropleth_pass():
 def test_map_settings_default():
     """Check default map settings"""
     m = view(world)
-    assert m.location == [-3.1774349999999956, 2.842170943040401e-14]
+    assert m.location == [
+        pytest.approx(-3.1774349999999956, rel=1e-6),
+        pytest.approx(2.842170943040401e-14, rel=1e-6),
+    ]
     assert m.options["zoom"] == 10
     assert m.options["zoomControl"] == True
     assert m.position == "relative"
