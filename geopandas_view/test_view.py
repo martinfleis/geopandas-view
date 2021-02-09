@@ -210,3 +210,81 @@ def test_style_kwds():
     out = m._parent.render()
     out_str = "".join(out.split())
     assert '"fillColor":"orange","fillOpacity":0.1,"weight":0.5' in out_str
+
+
+def test_tooltip():
+    """Test tooltip"""
+    # default with no tooltip or popup
+    m = view(world)
+    assert "GeoJsonTooltip" not in str(m.to_dict())
+    assert "GeoJsonPopup" not in str(m.to_dict())
+
+    # True
+    m = view(world, tooltip=True, popup=True)
+    assert "GeoJsonTooltip" in str(m.to_dict())
+    assert "GeoJsonPopup" in str(m.to_dict())
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
+    assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
+
+    # single column
+    m = view(world, tooltip="pop_est", popup="iso_a3")
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    assert 'fields=["pop_est"]' in out_str
+    assert 'aliases=["pop_est"]' in out_str
+    assert 'fields=["iso_a3"]' in out_str
+    assert 'aliases=["iso_a3"]' in out_str
+
+    # list
+    m = view(world, tooltip=["pop_est", "continent"], popup=["iso_a3", "gdp_md_est"])
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    assert 'fields=["pop_est","continent"]' in out_str
+    assert 'aliases=["pop_est","continent"]' in out_str
+    assert 'fields=["iso_a3","gdp_md_est"' in out_str
+    assert 'aliases=["iso_a3","gdp_md_est"]' in out_str
+
+    # number
+    m = view(world, tooltip=2, popup=2)
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    assert 'fields=["pop_est","continent"]' in out_str
+    assert 'aliases=["pop_est","continent"]' in out_str
+
+    # keywords tooltip
+    m = view(
+        world,
+        tooltip=True,
+        popup=False,
+        tooltip_kwds=dict(aliases=[0, 1, 2, 3, 4], sticky=False),
+    )
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
+    assert "aliases=[0,1,2,3,4]" in out_str
+    assert '"sticky":false' in out_str
+
+    # keywords popup
+    m = view(
+        world, tooltip=False, popup=True, popup_kwds=dict(aliases=[0, 1, 2, 3, 4]),
+    )
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
+    assert "aliases=[0,1,2,3,4]" in out_str
+    assert "<th>${aliases[i]" in out_str
+
+    # no labels
+    m = view(
+        world,
+        tooltip=True,
+        popup=True,
+        tooltip_kwds=dict(labels=False),
+        popup_kwds=dict(labels=False),
+    )
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    assert "<th>${aliases[i]" not in out_str
+
