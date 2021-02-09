@@ -228,6 +228,15 @@ def test_tooltip():
     assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
     assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
 
+    # True choropleth
+    m = view(world, column="pop_est", tooltip=True, popup=True)
+    assert "GeoJsonTooltip" in str(m.to_dict())
+    assert "GeoJsonPopup" in str(m.to_dict())
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
+    assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
+
     # single column
     m = view(world, tooltip="pop_est", popup="iso_a3")
     out = m._parent.render()
