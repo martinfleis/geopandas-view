@@ -45,7 +45,10 @@ def test_map_settings_default():
 def test_map_settings_custom():
     """Check custom map settins"""
     m = view(nybb, zoom_control=False, width=200, height=200, tiles="CartoDB positron")
-    assert m.location == [40.70582377450201, -73.9778006856748]
+    assert m.location == [
+        pytest.approx(40.70582377450201, rel=1e-6),
+        pytest.approx(-73.9778006856748, rel=1e-6),
+    ]
     assert m.options["zoom"] == 10
     assert m.options["zoomControl"] == False
     assert m.height == (200.0, "px")
