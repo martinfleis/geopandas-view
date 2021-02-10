@@ -6,6 +6,8 @@ import geopandas as gpd
 import mapclassify
 import numpy as np
 
+from branca.colormap import ColorMap, StepColormap, LinearColormap
+
 # available named colors
 _BRANCA_COLORS = [
     "red",
@@ -470,22 +472,64 @@ def _choropleth(
         bins = binning.bins.tolist()
         bins.insert(0, gdf[column].min())
 
-    choro = folium.Choropleth(
-        gdf.__geo_interface__,
-        data=gdf[["__folium_key", column]],
-        key_on="feature.properties.__folium_key",
-        columns=["__folium_key", column],
-        legend_name=column,
-        fill_color=cmap,
-        bins=bins,
-        name=column,
-        **kwds,
-    )
+    if cmap is None or isinstance(cmap, str):
+        choro = folium.Choropleth(
+            gdf.__geo_interface__,
+            data=gdf[["__folium_key", column]],
+            key_on="feature.properties.__folium_key",
+            columns=["__folium_key", column],
+            legend_name=column,
+            fill_color=cmap,
+            bins=bins,
+            name=column,
+            **kwds,
+        )
+        if tooltip is not False:
+            choro.geojson.add_child(_tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds))
+        if popup is not False:
+            choro.geojson.add_child(_tooltip_popup("popup", popup, gdf, **popup_kwds))
 
-    if tooltip is not False:
-        choro.geojson.add_child(_tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds))
-    if popup is not False:
-        choro.geojson.add_child(_tooltip_popup("popup", popup, gdf, **popup_kwds))
+    import inspect
+
+    def get_default_args(func):
+        signature = inspect.signature(func)
+        return {
+            k: v.default
+            for k, v in signature.parameters.items()
+            if v.default is not inspect.Parameter.empty
+        }
+    def_args = get_default_args(folium.Choropleth)
+
+    def highlight_function(x):
+        return {
+            'weight': line_weight + 2,
+            'fillOpacity': fill_opacity + .2
+        }
+
+    if isinstance(cmap, (ColorMap, LinearColormap, StepColormap)):
+        gdf_dict = gdf.set_index(["__folium_key"])[column]
+        color_dict = {key: cmap(gdf_dict[key]) for key in gdf_dict.keys()}
+        line_weight = kwds.get('line_weight') or def_args['line_weight']
+        line_color = kwds.get('line_color') or def_args['line_color']
+        line_opacity = kwds.get('line_opacity') or def_args['line_opacity']
+        fill_opacity = kwds.get('fill_opacity') or def_args['fill_opacity']
+        highlight = kwds.get('highlight') or def_args['highlight']
+        smooth_factor = kwds.get('smooth_factor') or def_args['smooth_factor']
+
+        choro = folium.GeoJson(
+            gdf.__geo_interface__,
+            tooltip=_tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds),
+            popup=_tooltip_popup("popup", popup, gdf, **popup_kwds),
+            style_function=lambda feature: {
+                "fillColor": color_dict[feature["properties"]["__folium_key"]],
+                'fillOpacity': fill_opacity,
+                'color': line_color,
+                'weight': line_weight,
+                'opacity': line_opacity,
+            },
+            smooth_factor=smooth_factor,
+            highlight_function=highlight_function if highlight else None
+        )
 
     choro.add_to(m)
 
