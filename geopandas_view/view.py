@@ -90,9 +90,9 @@ def view(
     ----------
     df : GeoDataFrame
         The GeoDataFrame to be plotted.
-    column : str (default None)
-        The name of the dataframe column.
-        TODO: support np.array, pd.Series
+    column : str, np.array, pd.Series (default None)
+        The name of the dataframe column, np.array, or pd.Series to be plotted.
+        If np.array or pd.Series are used then it must have same length as dataframe.
     cmap : str (default None)
         The name of a colormap recognized by colorbrewer. Available are:
         ``["BuGn", "BuPu", "GnBu", "OrRd", "PuBu", "PuBuGn", "PuRd", "RdPu", "YlGn",
@@ -242,7 +242,16 @@ def view(
         )
 
     if column is not None:
-        if pd.api.types.is_categorical_dtype(gdf[column]):
+        if isinstance(column, (np.ndarray, pd.Series)):
+            if column.shape[0] != gdf.shape[0]:
+                raise ValueError(
+                    "The GeoDataframe and given column have different number of rows."
+                )
+            else:
+                column_name = '__plottable_column'
+                gdf[column_name] = column
+                column = column_name
+        elif pd.api.types.is_categorical_dtype(gdf[column]):
             categorical = True
         elif gdf[column].dtype is np.dtype("O"):
             categorical = True
@@ -406,9 +415,9 @@ def _choropleth(
         Existing map instance on which to draw the plot
     gdf : GeoDataFrame
         The GeoDataFrame to be viewed.
-    column : str (default None)
-        The name of the dataframe column.
-        TODO: support np.array, pd.Series
+    column : str, np.array, pd.Series (default None)
+        The name of the dataframe column, np.array, or pd.Series to be plotted.
+                dataframe dataframe.
     cmap : str (default None)
         The name of a colormap recognized by colorbrewer. Available are:
         ``["BuGn", "BuPu", "GnBu", "OrRd", "PuBu", "PuBuGn", "PuRd", "RdPu", "YlGn",
@@ -454,7 +463,6 @@ def _choropleth(
     """
 
     gdf["__folium_key"] = range(len(gdf))
-    geom = gdf.geometry.name
 
     # get bins
     if scheme is not None:

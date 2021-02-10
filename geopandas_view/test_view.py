@@ -1,5 +1,6 @@
 import geopandas as gpd
 import pandas as pd
+import numpy as np
 import pytest
 from geopandas_view import view
 
@@ -197,6 +198,17 @@ def test_categorical():
     out_str = "".join(out.split())
     for c in _BRANCA_COLORS:
         assert f'"color":"{c}"' in out_str
+
+def test_column_values():
+    """
+    Check that the dataframe plot method returns same values with an
+    input string (column in df), pd.Series, or np.array
+    """
+    column_array = np.array(world['pop_est'])
+    m1 = view(world, column="pop_est") # column name
+    m2 = view(world, column=column_array) # np.array
+    m3 = view(world, column=world['pop_est']) # pd.Series
+    assert m1.location == m2.location == m3.location
 
 
 def test_no_crs():
