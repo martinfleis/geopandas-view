@@ -417,7 +417,7 @@ def _choropleth(
         The GeoDataFrame to be viewed.
     column : str, np.array, pd.Series (default None)
         The name of the dataframe column, np.array, or pd.Series to be plotted.
-                dataframe dataframe.
+        If np.array or pd.Series are used then it must have same length as dataframe.
     cmap : str (default None)
         The name of a colormap recognized by colorbrewer. Available are:
         ``["BuGn", "BuPu", "GnBu", "OrRd", "PuBu", "PuBuGn", "PuRd", "RdPu", "YlGn",
