@@ -63,8 +63,8 @@ def view(
     m=None,
     tiles="OpenStreetMap",
     attr=None,
-    tooltip=10,
-    popup=None,
+    tooltip=False,
+    popup=False,
     categorical=False,
     scheme=None,
     k=5,
@@ -78,6 +78,8 @@ def view(
     control_scale=True,
     crs="EPSG3857",
     style_kwds={},
+    tooltip_kwds={},
+    popup_kwds={},
     **kwargs,
 ):
     """Interactive map based on GeoPandas and folium/leaflet.js
@@ -112,18 +114,16 @@ def view(
         to check their terms and conditions and to provide attribution with the attr keyword.
     attr : str (default None)
         Map tile attribution; only required if passing custom tile URL.
-    tooltip : str, int, list (default 10)
+    tooltip : bool, str, int, list (default False)
         Display GeoDataFrame attributes when hovering over the object.
-        Integer specifies first n columns to be included, ``'all'`` includes all
-        columns, string specifies a single column name, ``0``, ``None`` or
-        ``False`` remove tooltip. Defaults to first 10 columns or the value of
-        choropleth.
-        TODO: resolve discrepancy between colored map and choropleth
-    popup : str, int, list (default None)
+        Integer specifies first n columns to be included, ``True`` includes all
+        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
+        column(s). Defaults to ``False``.
+    popup : bool, str, int, list (default False)
         Input GeoDataFrame attributes for object displayed when clicking.
-        Integer specifies first n columns to be included, ``'all'`` includes all
-        columns, string specifies a single column name, ``0``, ``None`` or
-        ``False`` remove popup.
+        Integer specifies first n columns to be included, ``True`` includes all
+        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
+        column(s). Defaults to ``False``.
     categorical : bool (default False)
         If False, cmap will reflect numerical values of the
         column being plotted. For non-numerical columns, this
@@ -184,6 +184,16 @@ def view(
         Note that the CRS of tiles needs to match ``crs``.
     style_kwds : dict (default {})
         Additional style to be passed to folium style_function
+    tooltip_kwds : dict (default {})
+        Additional keywords to be passed to folium.features.GeoJsonTooltip,
+        e.g. ``aliases``, ``labels``, or ``sticky``. See the folium
+        documentation for details:
+        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonTooltip
+    popup_kwds : dict (default {})
+        Additional keywords to be passed to folium.features.GeoJsonPopup,
+        e.g. ``aliases`` or ``labels``. See the folium
+        documentation for details:
+        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
 
     **kwargs : dict
         Additional options to be passed on to the folium.Map, folium.GeoJson or
@@ -254,7 +264,9 @@ def view(
             color=color,
             style_kwds=style_kwds,
             tooltip=tooltip,
+            tooltip_kwds=tooltip_kwds,
             popup=popup,
+            popup_kwds=popup_kwds,
             **kwargs,
         )
     else:
@@ -267,6 +279,10 @@ def view(
             scheme=scheme,
             style_kwds=style_kwds,
             classification_kwds=classification_kwds,
+            tooltip=tooltip,
+            tooltip_kwds=tooltip_kwds,
+            popup=popup,
+            popup_kwds=popup_kwds,
             **kwargs,
         )
 
@@ -277,7 +293,15 @@ def view(
 
 
 def _simple(
-    m, gdf, color=None, style_kwds={}, tooltip=None, popup=None, **kwds,
+    m,
+    gdf,
+    color=None,
+    style_kwds={},
+    tooltip=False,
+    popup=False,
+    tooltip_kwds={},
+    popup_kwds={},
+    **kwds,
 ):
     """
     Plot a simple single-color map with tooltip.
@@ -292,17 +316,27 @@ def _simple(
         If specified, all objects will be colored uniformly.
     style_kwds : dict (default {})
         Additional style to be passed to folium style_function
-    tooltip : str, int, list (default 10)
+    tooltip : bool, str, int, list (default False)
         Display GeoDataFrame attributes when hovering over the object.
-        Integer specifies first n columns to be included, ``'all'`` includes all
-        columns, string specifies a single column name, ``0``, ``None`` or
-        ``False`` remove tooltip. Defaults to first 10 columns or the value of
-        choropleth.
-    popup : str, int, list (default None)
+        Integer specifies first n columns to be included, ``True`` includes all
+        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
+        column(s). Defaults to ``False``.
+    popup : bool, str, int, list (default False)
         Input GeoDataFrame attributes for object displayed when clicking.
-        Integer specifies first n columns to be included, ``'all'`` includes all
-        columns, string specifies a single column name, ``0``, ``None`` or
-        ``False`` remove popup.
+        Integer specifies first n columns to be included, ``True`` includes all
+        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
+        column(s). Defaults to ``False``.
+    tooltip_kwds : dict (default {})
+        Additional keywords to be passed to folium.features.GeoJsonTooltip,
+        e.g. ``aliases``, ``labels``, or ``sticky``. See the folium
+        documentation for details:
+        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonTooltip
+    popup_kwds : dict (default {})
+        Additional keywords to be passed to folium.features.GeoJsonPopup,
+        e.g. ``aliases`` or ``labels``. See the folium
+        documentation for details:
+        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
+
     **kwds : dict
         Keyword arguments to pass to folium.GeoJson
     """
@@ -311,8 +345,8 @@ def _simple(
 
     if isinstance(gdf, gpd.GeoDataFrame):
         # specify fields to show in the tooltip
-        tooltip = _tooltip_popup("tooltip", tooltip, gdf)
-        popup = _tooltip_popup("popup", popup, gdf)
+        tooltip = _tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds)
+        popup = _tooltip_popup("popup", popup, gdf, **popup_kwds)
     else:
         tooltip = None
         popup = None
@@ -354,11 +388,13 @@ def _choropleth(
     column=None,
     cmap=None,
     style_kwds={},
-    tooltip=None,
-    popup=None,
+    tooltip=False,
+    popup=False,
     bins=5,
     scheme=None,
     classification_kwds=None,
+    tooltip_kwds={},
+    popup_kwds={},
     **kwds,
 ):
     """
@@ -379,18 +415,16 @@ def _choropleth(
         "YlGnBu", "YlOrBr", "YlOrRd"]``
     style_kwds : dict (default {})
         Additional style to be passed to folium style_function
-    tooltip : str, int, list (default column)
+    tooltip : bool, str, int, list (default False)
         Display GeoDataFrame attributes when hovering over the object.
-        Integer specifies first n columns to be included, ``'all'`` includes all
-        columns, string specifies a single column name, ``0``, ``None`` or
-        ``False`` remove tooltip. Defaults to the selected column.
-        TODO: not implemented yet
-    popup : str, int, list (default 10)
+        Integer specifies first n columns to be included, ``True`` includes all
+        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
+        column(s). Defaults to ``False``.
+    popup : bool, str, int, list (default False)
         Input GeoDataFrame attributes for object displayed when clicking.
-        Integer specifies first n columns to be included, ``'all'`` includes all
-        columns, string specifies a single column name, ``0``, ``None`` or
-        ``False`` remove popup. Defaults to first 10 columns
-        TODO: not implemented yet
+        Integer specifies first n columns to be included, ``True`` includes all
+        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
+        column(s). Defaults to ``False``.
     bins : int (default 5)
         Number of classes
     scheme : str (default None)
@@ -404,6 +438,17 @@ def _choropleth(
         'UserDefined'). Arguments can be passed in classification_kwds.
     classification_kwds : dict (default None)
         Keyword arguments to pass to mapclassify
+    tooltip_kwds : dict (default {})
+        Additional keywords to be passed to folium.features.GeoJsonTooltip,
+        e.g. ``aliases``, ``labels``, or ``sticky``. See the folium
+        documentation for details:
+        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonTooltip
+    popup_kwds : dict (default {})
+        Additional keywords to be passed to folium.features.GeoJsonPopup,
+        e.g. ``aliases`` or ``labels``. See the folium
+        documentation for details:
+        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
+
     **kwds : dict
         Keyword arguments to pass to folium.GeoJson
     """
@@ -437,23 +482,26 @@ def _choropleth(
         **kwds,
     )
 
-    # TODO: allow customization of tooltip and popup
-    choro.geojson.add_child(_tooltip_popup("tooltip", [column], gdf, labels=False))
-    choro.geojson.add_child(_tooltip_popup("popup", 10, gdf, labels=True))
+    if tooltip is not False:
+        choro.geojson.add_child(_tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds))
+    if popup is not False:
+        choro.geojson.add_child(_tooltip_popup("popup", popup, gdf, **popup_kwds))
 
     choro.add_to(m)
 
 
-def _tooltip_popup(type, fields, gdf, labels=True):
+def _tooltip_popup(type, fields, gdf, **kwds):
     """get tooltip or popup"""
     # specify fields to show in the tooltip
     if fields is False or fields is None or fields == 0:
         return None
     else:
-        if fields == "all":
+        if fields is True:
             fields = gdf.columns.drop(gdf.geometry.name).to_list()
         elif isinstance(fields, int):
             fields = gdf.columns.drop(gdf.geometry.name).to_list()[:fields]
+        elif isinstance(fields, str):
+            fields = [fields]
 
     if "__folium_key" in fields:
         fields.remove("__folium_key")
@@ -461,6 +509,6 @@ def _tooltip_popup(type, fields, gdf, labels=True):
     # Cast fields to str
     fields = list(map(str, fields))
     if type == "tooltip":
-        return folium.GeoJsonTooltip(fields, labels=labels)
+        return folium.GeoJsonTooltip(fields, **kwds)
     elif type == "popup":
-        return folium.GeoJsonPopup(fields, labels=labels)
+        return folium.GeoJsonPopup(fields, **kwds)
