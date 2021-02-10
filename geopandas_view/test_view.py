@@ -199,6 +199,7 @@ def test_categorical():
     for c in _BRANCA_COLORS:
         assert f'"color":"{c}"' in out_str
 
+
 def test_column_values():
     """
     Check that the dataframe plot method returns same values with an
@@ -209,6 +210,10 @@ def test_column_values():
     m2 = view(world, column=column_array) # np.array
     m3 = view(world, column=world['pop_est']) # pd.Series
     assert m1.location == m2.location == m3.location
+
+    # GeoDataframe and the given list have different number of rows
+    with pytest.raises(ValueError, match="different number of rows"):
+        view(world,column=np.array([1, 2, 3]))
 
 
 def test_no_crs():
