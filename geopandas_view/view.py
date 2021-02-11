@@ -513,6 +513,8 @@ def _tooltip_popup(type, fields, gdf, **kwds):
 
     if "__folium_key" in fields:
         fields.remove("__folium_key")
+    if "__plottable_column" in fields:
+        fields.remove("__plottable_column")
 
     # Cast fields to str
     fields = list(map(str, fields))
