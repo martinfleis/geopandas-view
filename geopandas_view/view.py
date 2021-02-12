@@ -463,8 +463,24 @@ def _choropleth(
     **kwds : dict
         Keyword arguments to pass to folium.GeoJson
     """
+    from branca.utilities import color_brewer
+
+    nan_fill_color = kwds.get('nan_fill_color') or "black"
+    fill_opacity = kwds.get('fill_opacity') or 0.6
+    nan_fill_opacity = kwds.get('nan_fill_opacity') or None
+    line_color = kwds.get('line_color') or "black"
+    line_weight = kwds.get('line_weight') or 1
+    line_opacity = kwds.get('line_opacity') or 1
+    legend_name = kwds.get('legend_name') or ""
+    topojson = kwds.get('topojson') or None
+    smooth_factor = kwds.get('smooth_factor') or None
+    highlight = kwds.get('highlight') or None
+
+    m._name = "Choropleth"
 
     gdf["__folium_key"] = range(len(gdf))
+    columns = ["__folium_key", column]
+    key_on = "feature.properties.__folium_key"
 
     # get bins
     if scheme is not None:
@@ -480,66 +496,142 @@ def _choropleth(
         bins = binning.bins.tolist()
         bins.insert(0, gdf[column].min())
 
-    if cmap is None or isinstance(cmap, str):
-        choro = folium.Choropleth(
-            gdf.__geo_interface__,
-            data=gdf[["__folium_key", column]],
-            key_on="feature.properties.__folium_key",
-            columns=["__folium_key", column],
-            legend_name=column,
-            fill_color=cmap,
-            bins=bins,
-            name=column,
-            **kwds,
-        )
-        if tooltip is not False:
-            choro.geojson.add_child(_tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds))
-        if popup is not False:
-            choro.geojson.add_child(_tooltip_popup("popup", popup, gdf, **popup_kwds))
+    geo_data = gdf.__geo_interface__
+    data = gdf[columns]
 
-    import inspect
+    # Create color_data dict
+    if hasattr(data, "set_index"):
+        # This is a pd.DataFrame
+        color_data = data.set_index("__folium_key")[column].to_dict()
+    elif hasattr(data, "to_dict"):
+        # This is a pd.Series
+        color_data = data.to_dict()
+    elif data:
+        color_data = dict(data)
+    else:
+        color_data = None
 
-    def get_default_args(func):
-        signature = inspect.signature(func)
-        return {
-            k: v.default
-            for k, v in signature.parameters.items()
-            if v.default is not inspect.Parameter.empty
-        }
-    def_args = get_default_args(folium.Choropleth)
-
-    def highlight_function(x):
-        return {
-            'weight': line_weight + 2,
-            'fillOpacity': fill_opacity + .2
-        }
+    color_scale = None
 
     if isinstance(cmap, (ColorMap, LinearColormap, StepColormap)):
-        gdf_dict = gdf.set_index(["__folium_key"])[column]
-        color_dict = {key: cmap(gdf_dict[key]) for key in gdf_dict.keys()}
-        line_weight = kwds.get('line_weight') or def_args['line_weight']
-        line_color = kwds.get('line_color') or def_args['line_color']
-        line_opacity = kwds.get('line_opacity') or def_args['line_opacity']
-        fill_opacity = kwds.get('fill_opacity') or def_args['fill_opacity']
-        highlight = kwds.get('highlight') or def_args['highlight']
-        smooth_factor = kwds.get('smooth_factor') or def_args['smooth_factor']
+        def color_scale_fun(feature):
+            color_dict = {key: cmap(color_data[key]) for key in color_data.keys()}
+            return color_dict[feature["properties"]["__folium_key"]], fill_opacity
 
-        choro = folium.GeoJson(
-            gdf.__geo_interface__,
+    elif callable(cmap):
+        def color_scale_fun(feature):
+            return cmap(feature["properties"][column]), fill_opacity
+
+    else:
+        cmap = cmap or ("blue" if data is None else "Blues")
+        if data is not None and not color_brewer(cmap):
+            raise ValueError(
+                "Please pass a valid color brewer code to "
+                "fill_local. See docstring for valid codes."
+            )
+
+        if nan_fill_opacity is None:
+            nan_fill_opacity = fill_opacity
+
+        if color_data is not None and key_on is not None:
+            real_values = np.array(list(color_data.values()))
+            real_values = real_values[~np.isnan(real_values)]
+            _, bin_edges = np.histogram(real_values, bins=bins)
+
+            bins_min, bins_max = min(bin_edges), max(bin_edges)
+            if np.any((real_values < bins_min) | (real_values > bins_max)):
+                raise ValueError(
+                    "All values are expected to fall into one of the provided "
+                    "bins (or to be Nan). Please check the `bins` parameter "
+                    "and/or your data."
+                )
+
+            # We add the colorscale
+            nb_bins = len(bin_edges) - 1
+            color_range = color_brewer(cmap, n=nb_bins)
+            color_scale = StepColormap(
+                color_range,
+                index=bin_edges,
+                vmin=bins_min,
+                vmax=bins_max,
+                caption=legend_name,
+            )
+
+            # then we 'correct' the last edge for numpy digitize
+            # (we add a very small amount to fake an inclusive right interval)
+            increasing = bin_edges[0] <= bin_edges[-1]
+            bin_edges[-1] = np.nextafter(bin_edges[-1], (1 if increasing else -1) * np.inf)
+
+            key_on = key_on[8:] if key_on.startswith("feature.") else key_on
+
+            def get_by_key(obj, key):
+                return (
+                    obj.get(key, None)
+                    if len(key.split(".")) <= 1
+                    else get_by_key(
+                        obj.get(key.split(".")[0], None), ".".join(key.split(".")[1:])
+                    )
+                )
+
+            def color_scale_fun(x):
+                key_of_x = get_by_key(x, key_on)
+                if key_of_x is None:
+                    raise ValueError("key_on `{!r}` not found in GeoJSON.".format(key_on))
+
+                if key_of_x not in color_data.keys():
+                    return nan_fill_color, nan_fill_opacity
+
+                value_of_x = color_data[key_of_x]
+                if np.isnan(value_of_x):
+                    return nan_fill_color, nan_fill_opacity
+
+                color_idx = np.digitize(value_of_x, bin_edges, right=False) - 1
+                return color_range[color_idx], fill_opacity
+
+        else:
+
+            def color_scale_fun(x):
+                return cmap, fill_opacity
+
+    def style_function(x):
+        color, opacity = color_scale_fun(x)
+        return {
+            "weight": line_weight,
+            "opacity": line_opacity,
+            "color": line_color,
+            "fillOpacity": opacity,
+            "fillColor": color,
+        }
+
+    def highlight_function(x):
+        return {"weight": line_weight + 2, "fillOpacity": fill_opacity + 0.2}
+
+    if topojson:
+        geojson = folium.TopoJson(
+            geo_data,
+            topojson,
             tooltip=_tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds),
             popup=_tooltip_popup("popup", popup, gdf, **popup_kwds),
-            style_function=lambda feature: {
-                "fillColor": color_dict[feature["properties"]["__folium_key"]],
-                'fillOpacity': fill_opacity,
-                'color': line_color,
-                'weight': line_weight,
-                'opacity': line_opacity,
-            },
+            style_function=style_function,
             smooth_factor=smooth_factor,
-            highlight_function=highlight_function if highlight else None
+            **kwds
+        )
+    else:
+        geojson = folium.GeoJson(
+            geo_data,
+            tooltip=_tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds),
+            popup=_tooltip_popup("popup", popup, gdf, **popup_kwds),
+            style_function=style_function,
+            smooth_factor=smooth_factor,
+            highlight_function=highlight_function if highlight else None,
+            **kwds
         )
 
-    choro.add_to(m)
+    m.add_child(geojson)
+    if color_scale:
+        m.add_child(color_scale)
+
+    return m
 
 
 def _tooltip_popup(type, fields, gdf, **kwds):
