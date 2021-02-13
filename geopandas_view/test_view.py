@@ -11,6 +11,12 @@ world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
 cities = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
 
 
+def _fetch_map_string(m):
+    out = m._parent.render()
+    out_str = "".join(out.split())
+    return out_str
+
+
 def test_simple_pass():
     """Make sure default pass"""
     m = view(nybb)
@@ -66,8 +72,7 @@ def test_map_settings_custom():
         attr="Google",
     )
 
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert (
         'tileLayer("https://mt1.google.com/vt/lyrs=m\\u0026x={x}\\u0026y={y}\\u0026z={z}",{"attribution":"Google"'
         in out_str
@@ -78,15 +83,13 @@ def test_simple_color():
     """Check color settings"""
     # single named color
     m = view(nybb, color="red")
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert '"color":"red"' in out_str
 
     # list of colors
     colors = ["#333333", "#367324", "#95824f", "#fcaa00", "#ffcc33"]
     m2 = view(nybb, color=colors)
-    out = m2._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m2)
     for c in colors:
         assert f'"color":"{c}"' in out_str
 
@@ -94,15 +97,13 @@ def test_simple_color():
     df = nybb.copy()
     df["colors"] = colors
     m3 = view(df, color="colors")
-    out = m3._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m3)
     for c in colors:
         assert f'"color":"{c}"' in out_str
 
     # line GeoSeries
     m4 = view(nybb.boundary, color="red")
-    out = m4._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m4)
     assert '"color":"red"' in out_str
 
 
@@ -110,8 +111,7 @@ def test_choropleth_linear():
     """Check choropleth colors"""
     # default cmap
     m = view(nybb, column="Shape_Leng")
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fillColor":"#08519c"' in out_str
     assert 'fillColor":"#3182bd"' in out_str
     assert 'fillColor":"#bdd7e7"' in out_str
@@ -119,8 +119,7 @@ def test_choropleth_linear():
 
     # named cmap
     m = view(nybb, column="Shape_Leng", cmap="PuRd")
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fillColor":"#980043"' in out_str
     assert 'fillColor":"#dd1c77"' in out_str
     assert 'fillColor":"#d7b5d8"' in out_str
@@ -128,8 +127,7 @@ def test_choropleth_linear():
 
     # custom number of bins
     m = view(nybb, column="Shape_Leng", k=3)
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fillColor":"#3182bd"' in out_str
     assert 'fillColor":"#deebf7"' in out_str
     assert (
@@ -142,8 +140,7 @@ def test_choropleth_mapclassify():
     """Mapclassify bins"""
     # quantiles
     m = view(nybb, column="Shape_Leng", scheme="quantiles")
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert (
         "tickValues([330470.010332,353533.27924319997,422355.43368280004,575068.0043608,772133.2280854001,896344.047763])"
         in out_str
@@ -151,8 +148,7 @@ def test_choropleth_mapclassify():
 
     # headtail
     m = view(world, column="pop_est", scheme="headtailbreaks")
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert (
         "tickValues([140.0,41712369.84180791,182567501.0,550193675.0,1330619341.0,1379302771.0])"
         in out_str
@@ -160,8 +156,7 @@ def test_choropleth_mapclassify():
 
     # custom k
     m = view(world, column="pop_est", scheme="naturalbreaks", k=3)
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert "tickValues([140.0,83301151.0,326625791.0,1379302771.0])" in out_str
 
 
@@ -169,8 +164,7 @@ def test_categorical():
     """Categorical maps"""
     # auto detection
     m = view(world, column="continent")
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert '"color":"darkred"' in out_str
     assert '"color":"orange"' in out_str
     assert '"color":"green"' in out_str
@@ -182,8 +176,7 @@ def test_categorical():
 
     # forced categorical
     m = view(nybb, column="BoroCode", categorical=True)
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert '"color":"orange"' in out_str
     assert '"color":"green"' in out_str
     assert '"color":"red"' in out_str
@@ -194,8 +187,7 @@ def test_categorical():
     df = world.copy()
     df["categorical"] = pd.Categorical(df["name"])
     m = view(df, column="categorical")
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     for c in _BRANCA_COLORS:
         assert f'"color":"{c}"' in out_str
 
@@ -205,27 +197,35 @@ def test_column_values():
     Check that the dataframe plot method returns same values with an
     input string (column in df), pd.Series, or np.array
     """
-    column_array = np.array(world['pop_est'])
-    m1 = view(world, column="pop_est") # column name
-    m2 = view(world, column=column_array) # np.array
-    m3 = view(world, column=world['pop_est']) # pd.Series
+    column_array = np.array(world["pop_est"])
+    m1 = view(world, column="pop_est")  # column name
+    m2 = view(world, column=column_array)  # np.array
+    m3 = view(world, column=world["pop_est"])  # pd.Series
     assert m1.location == m2.location == m3.location
 
     m1_fields = view(world, column=column_array, tooltip=True, popup=True)
-    out1_fields = m1_fields._parent.render()
-    out1_fields_str = "".join(out1_fields.split())
-    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out1_fields_str
-    assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out1_fields_str
+    out1_fields_str = _fetch_map_string(m1_fields)
+    assert (
+        'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out1_fields_str
+    )
+    assert (
+        'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]'
+        in out1_fields_str
+    )
 
-    m2_fields = view(world, column=world['pop_est'], tooltip=True, popup=True)
-    out2_fields = m2_fields._parent.render()
-    out2_fields_str = "".join(out2_fields.split())
-    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out2_fields_str
-    assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out2_fields_str
+    m2_fields = view(world, column=world["pop_est"], tooltip=True, popup=True)
+    out2_fields_str = _fetch_map_string(m2_fields)
+    assert (
+        'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out2_fields_str
+    )
+    assert (
+        'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]'
+        in out2_fields_str
+    )
 
     # GeoDataframe and the given list have different number of rows
     with pytest.raises(ValueError, match="different number of rows"):
-        view(world,column=np.array([1, 2, 3]))
+        view(world, column=np.array([1, 2, 3]))
 
 
 def test_no_crs():
@@ -239,8 +239,7 @@ def test_no_crs():
 def test_style_kwds():
     """Style keywords"""
     m = view(world, style_kwds=dict(fillOpacity=0.1, weight=0.5, fillColor="orange"))
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert '"fillColor":"orange","fillOpacity":0.1,"weight":0.5' in out_str
 
 
@@ -255,8 +254,7 @@ def test_tooltip():
     m = view(world, tooltip=True, popup=True)
     assert "GeoJsonTooltip" in str(m.to_dict())
     assert "GeoJsonPopup" in str(m.to_dict())
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
     assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
 
@@ -264,15 +262,13 @@ def test_tooltip():
     m = view(world, column="pop_est", tooltip=True, popup=True)
     assert "GeoJsonTooltip" in str(m.to_dict())
     assert "GeoJsonPopup" in str(m.to_dict())
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
     assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
 
     # single column
     m = view(world, tooltip="pop_est", popup="iso_a3")
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fields=["pop_est"]' in out_str
     assert 'aliases=["pop_est"]' in out_str
     assert 'fields=["iso_a3"]' in out_str
@@ -280,8 +276,7 @@ def test_tooltip():
 
     # list
     m = view(world, tooltip=["pop_est", "continent"], popup=["iso_a3", "gdp_md_est"])
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fields=["pop_est","continent"]' in out_str
     assert 'aliases=["pop_est","continent"]' in out_str
     assert 'fields=["iso_a3","gdp_md_est"' in out_str
@@ -289,8 +284,7 @@ def test_tooltip():
 
     # number
     m = view(world, tooltip=2, popup=2)
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fields=["pop_est","continent"]' in out_str
     assert 'aliases=["pop_est","continent"]' in out_str
 
@@ -301,8 +295,7 @@ def test_tooltip():
         popup=False,
         tooltip_kwds=dict(aliases=[0, 1, 2, 3, 4], sticky=False),
     )
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
     assert "aliases=[0,1,2,3,4]" in out_str
     assert '"sticky":false' in out_str
@@ -311,8 +304,7 @@ def test_tooltip():
     m = view(
         world, tooltip=False, popup=True, popup_kwds=dict(aliases=[0, 1, 2, 3, 4]),
     )
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
     assert "aliases=[0,1,2,3,4]" in out_str
     assert "<th>${aliases[i]" in out_str
@@ -325,7 +317,38 @@ def test_tooltip():
         tooltip_kwds=dict(labels=False),
         popup_kwds=dict(labels=False),
     )
-    out = m._parent.render()
-    out_str = "".join(out.split())
+    out_str = _fetch_map_string(m)
     assert "<th>${aliases[i]" not in out_str
 
+
+def test_custom_markers():
+    import folium
+
+    # Markers
+    m = view(
+        cities, marker_type="marker", marker_kwds={"icon": folium.Icon(icon="star")},
+    )
+    assert ""","icon":"star",""" in _fetch_map_string(m)
+
+    # Circle Markers
+    m = view(cities, marker_type="circle", marker_kwds={"fill_color": "red"})
+    assert ""","fillColor":"red",""" in _fetch_map_string(m)
+
+    # Folium Markers
+    m = view(
+        cities,
+        marker_type=folium.Circle(
+            radius=4, fill_color="orange", fill_opacity=0.4, color="black", weight=1
+        ),
+    )
+    assert ""","color":"black",""" in _fetch_map_string(m)
+
+    # Circle
+    m = view(cities, marker_type="circle_marker", marker_kwds={"radius": 10})
+    assert ""","radius":10,""" in _fetch_map_string(m)
+
+    # Unsupported Markers
+    with pytest.raises(
+        ValueError, match="Only marker, circle, and circle_marker are supported"
+    ):
+        view(cities, marker_type="dummy")

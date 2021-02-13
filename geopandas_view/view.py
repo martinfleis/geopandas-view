@@ -77,6 +77,8 @@ def view(
     missing_kwds=None,
     control_scale=True,
     crs="EPSG3857",
+    marker_type=None,
+    marker_kwds={},
     style_kwds={},
     tooltip_kwds={},
     popup_kwds={},
@@ -248,7 +250,7 @@ def view(
                     "The GeoDataframe and given column have different number of rows."
                 )
             else:
-                column_name = '__plottable_column'
+                column_name = "__plottable_column"
                 gdf[column_name] = column
                 column = column_name
         elif pd.api.types.is_categorical_dtype(gdf[column]):
@@ -276,6 +278,8 @@ def view(
             tooltip_kwds=tooltip_kwds,
             popup=popup,
             popup_kwds=popup_kwds,
+            marker_type=marker_type,
+            marker_kwds=marker_kwds,
             **kwargs,
         )
     else:
@@ -310,6 +314,8 @@ def _simple(
     popup=False,
     tooltip_kwds={},
     popup_kwds={},
+    marker_type=None,
+    marker_kwds={},
     **kwds,
 ):
     """
@@ -349,8 +355,6 @@ def _simple(
     **kwds : dict
         Keyword arguments to pass to folium.GeoJson
     """
-    # TODO: field names must be string
-    # TODO: wrap custom markers
 
     if isinstance(gdf, gpd.GeoDataFrame):
         # specify fields to show in the tooltip
@@ -381,11 +385,24 @@ def _simple(
     else:  # use folium default
         style_function = lambda x: {**style_kwds}
 
+    marker = marker_type
+    if marker_type is not None and isinstance(marker_type, str):
+        if marker_type == "marker":
+            marker = folium.Marker(**marker_kwds)
+        elif marker_type == "circle":
+            marker = folium.Circle(**marker_kwds)
+        elif marker_type == "circle_marker":
+            marker = folium.CircleMarker(**marker_kwds)
+        else:
+            raise ValueError(
+                "Only marker, circle, and circle_marker are supported as marker values"
+            )
     # add dataframe to map
     folium.GeoJson(
         gdf.__geo_interface__,
         tooltip=tooltip,
         popup=popup,
+        marker=marker,
         style_function=style_function,
         **kwds,
     ).add_to(m)
