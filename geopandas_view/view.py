@@ -184,6 +184,10 @@ def view(
         maps).
 
         Note that the CRS of tiles needs to match ``crs``.
+    marker_type : str, folium.Circle, folium.CircleMarker, folium.Marker (default None)
+        Allowed strings are ('marker', 'circle', 'circle_marker')
+    marker_kwds: dict (default {})
+        Additional keywords to be passed to the selected marker_type
     style_kwds : dict (default {})
         Additional style to be passed to folium style_function
     tooltip_kwds : dict (default {})
@@ -351,6 +355,10 @@ def _simple(
         e.g. ``aliases`` or ``labels``. See the folium
         documentation for details:
         https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
+    marker_type : str, folium.Circle, folium.CircleMarker, folium.Marker (default None)
+        Allowed strings are ('marker', 'circle', 'circle_marker')
+    marker_kwds: dict (default {})
+        Additional keywords to be passed to the selected marker_type
 
     **kwds : dict
         Keyword arguments to pass to folium.GeoJson

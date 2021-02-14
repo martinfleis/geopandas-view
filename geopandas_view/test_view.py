@@ -1,6 +1,7 @@
 import geopandas as gpd
 import pandas as pd
 import numpy as np
+import folium
 import pytest
 from geopandas_view import view
 
@@ -322,8 +323,6 @@ def test_tooltip():
 
 
 def test_custom_markers():
-    import folium
-
     # Markers
     m = view(
         cities, marker_type="marker", marker_kwds={"icon": folium.Icon(icon="star")},
