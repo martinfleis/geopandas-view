@@ -74,7 +74,6 @@ def view(
     height="100%",
     categories=None,
     classification_kwds=None,
-    missing_kwds=None,
     control_scale=True,
     crs="EPSG3857",
     marker_type=None,
@@ -160,12 +159,6 @@ def view(
         TODO: not implemented yet
     classification_kwds : dict (default None)
         Keyword arguments to pass to mapclassify
-    missing_kwds : dict (default None)
-        Keyword arguments specifying color options (as style_kwds)
-        to be passed on to geometries with missing values in addition to
-        or overwriting other style kwds. If None, geometries with missing
-        values are plotted black.
-        TODO: not implemented yet
     control_scale : bool, (default True)
         Whether to add a control scale on the map.
     crs : str (default "EPSG3857")
