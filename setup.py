@@ -7,4 +7,5 @@ setuptools.setup(
     author_email="martin@martinfleischmann.net",
     python_requires=">=3.6",
     install_requires=["geopandas", "folium", "mapclassify"],
+    packages=setuptools.find_packages(),
 )
