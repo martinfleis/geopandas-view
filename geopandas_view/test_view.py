@@ -303,7 +303,10 @@ def test_tooltip():
 
     # keywords popup
     m = view(
-        world, tooltip=False, popup=True, popup_kwds=dict(aliases=[0, 1, 2, 3, 4]),
+        world,
+        tooltip=False,
+        popup=True,
+        popup_kwds=dict(aliases=[0, 1, 2, 3, 4]),
     )
     out_str = _fetch_map_string(m)
     assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
@@ -325,7 +328,9 @@ def test_tooltip():
 def test_custom_markers():
     # Markers
     m = view(
-        cities, marker_type="marker", marker_kwds={"icon": folium.Icon(icon="star")},
+        cities,
+        marker_type="marker",
+        marker_kwds={"icon": folium.Icon(icon="star")},
     )
     assert ""","icon":"star",""" in _fetch_map_string(m)
 
@@ -351,3 +356,29 @@ def test_custom_markers():
         ValueError, match="Only marker, circle, and circle_marker are supported"
     ):
         view(cities, marker_type="dummy")
+
+
+def test_vmin_vmax():
+    m = view(world, "gdp_md_est", vmin=-10000000, vmax=100000000)
+    assert (
+        "tickValues([-10000000.0,12000000.0,34000000.0,56000000.0,78000000.0,100000000.0]"
+        in _fetch_map_string(m)
+    )
+
+    m = view(world, "gdp_md_est", vmin=-10000000, vmax=100000000, k=3)
+    assert (
+        "tickValues([-10000000.0,26666666.666666664,63333333.33333333,100000000.0]"
+        in _fetch_map_string(m)
+    )
+    with pytest.warns(UserWarning, match="vmin' cannot be higher than minimum value"):
+        m = view(world, "gdp_md_est", vmin=100000, k=3)
+        assert (
+            "tickValues([16.0,7046677.333333333,14093338.666666666,21140000.0])"
+            in _fetch_map_string(m)
+        )
+    with pytest.warns(UserWarning, match="'vmax' cannot be lower than maximum value"):
+        m = view(world, "gdp_md_est", vmax=100000, k=3)
+        assert (
+            "tickValues([16.0,7046677.333333333,14093338.666666666,21140000.0])"
+            in _fetch_map_string(m)
+        )
