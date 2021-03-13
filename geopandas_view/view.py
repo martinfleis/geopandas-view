@@ -5,29 +5,8 @@ import pandas as pd
 import geopandas as gpd
 import mapclassify
 import numpy as np
-
-# available named colors
-_BRANCA_COLORS = [
-    "red",
-    "blue",
-    "green",
-    "purple",
-    "orange",
-    "darkred",
-    "lightred",
-    "beige",
-    "darkblue",
-    "darkgreen",
-    "cadetblue",
-    "darkpurple",
-    "white",
-    "pink",
-    "lightblue",
-    "lightgreen",
-    "gray",
-    "black",
-    "lightgray",
-]
+import matplotlib.cm as cm
+import matplotlib.colors as colors
 
 # available color palettes
 _CB_PALETTES = [
@@ -257,13 +236,10 @@ def view(
 
     if categorical:
         cat = pd.Categorical(gdf[column])
-        if len(cat.categories) > len(_BRANCA_COLORS):
-            color = np.take(
-                _BRANCA_COLORS * (len(cat.categories) // len(_BRANCA_COLORS) + 1),
-                cat.codes,
-            )
-        else:
-            color = np.take(_BRANCA_COLORS, cat.codes)
+        cmap = cmap if cmap else "tab20"
+        color = np.apply_along_axis(
+            colors.to_hex, 1, cm.get_cmap(cmap, len(cat.categories))(cat.codes)
+        )
 
     if column is None or categorical:
         _simple(
