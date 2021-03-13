@@ -201,6 +201,23 @@ def test_categorical():
     assert 'color":"#e41a1c"' in out_str
     assert 'color":"#ff7f00"' in out_str
 
+    # custom list of colors
+    cmap = ["#333432", "#3b6e8c", "#bc5b4f", "#8fa37e", "#efc758"]
+    m = view(nybb, column="BoroName", cmap=cmap)
+    out_str = _fetch_map_string(m)
+    for c in cmap:
+        assert f'"color":"{c}"' in out_str
+
+    # shorter list (to make it repeat)
+    cmap = ["#333432", "#3b6e8c"]
+    m = view(nybb, column="BoroName", cmap=cmap)
+    out_str = _fetch_map_string(m)
+    for c in cmap:
+        assert f'"color":"{c}"' in out_str
+
+    with pytest.raises(ValueError, match="'cmap' is invalid."):
+        view(nybb, column="BoroName", cmap="nonsense")
+
 
 def test_column_values():
     """

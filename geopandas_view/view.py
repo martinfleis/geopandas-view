@@ -7,6 +7,7 @@ import mapclassify
 import numpy as np
 import matplotlib.cm as cm
 import matplotlib.colors as colors
+import matplotlib.pyplot as plt
 
 # available color palettes
 _CB_PALETTES = [
@@ -74,9 +75,10 @@ def view(
         The name of the dataframe column, np.array, or pd.Series to be plotted.
         If np.array or pd.Series are used then it must have same length as dataframe.
     cmap : str (default None)
-        The name of a colormap recognized by colorbrewer. Available are:
+        For non-categorical maps, the name of a colormap recognized by colorbrewer. Available are:
         ``["BuGn", "BuPu", "GnBu", "OrRd", "PuBu", "PuBuGn", "PuRd", "RdPu", "YlGn",
         "YlGnBu", "YlOrBr", "YlOrRd"]``
+        For categorical maps, the name of a matplotlib colormap or a list-like of colors.
     color : str, array-like (default None)
         Named color or array-like of colors (named or hex)
     m : folium.Map (default None)
@@ -237,9 +239,29 @@ def view(
     if categorical:
         cat = pd.Categorical(gdf[column])
         cmap = cmap if cmap else "tab20"
-        color = np.apply_along_axis(
-            colors.to_hex, 1, cm.get_cmap(cmap, len(cat.categories))(cat.codes)
-        )
+
+        # colormap exists in matplotlib
+        if cmap in plt.colormaps():
+
+            color = np.apply_along_axis(
+                colors.to_hex, 1, cm.get_cmap(cmap, len(cat.categories))(cat.codes)
+            )
+
+        # custom list of colors
+        elif pd.api.types.is_list_like(cmap):
+            if len(cat.categories) > len(cmap):
+                color = np.take(
+                    cmap * (len(cat.categories) // len(cmap) + 1),
+                    cat.codes,
+                )
+            else:
+                color = np.take(cmap, cat.codes)
+
+        else:
+            raise ValueError(
+                "'cmap' is invalid. For categorical plots, pass either valid "
+                "named matplotlib colormap or a list-like of colors."
+            )
 
     if column is None or categorical:
         _simple(
