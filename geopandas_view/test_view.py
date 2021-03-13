@@ -219,6 +219,20 @@ def test_categorical():
         view(nybb, column="BoroName", cmap="nonsense")
 
 
+def test_categories():
+    m = view(
+        nybb,
+        column="BoroName",
+        categories=["Brooklyn", "Staten Island", "Queens", "Bronx", "Manhattan"],
+    )
+    out_str = _fetch_map_string(m)
+    assert '"Bronx","__folium_color":"#c7c7c7"' in out_str
+    assert '"Manhattan","__folium_color":"#9edae5"' in out_str
+    assert '"Brooklyn","__folium_color":"#1f77b4"' in out_str
+    assert '"StatenIsland","__folium_color":"#98df8a"' in out_str
+    assert '""Queens","__folium_color":"#8c564b"' in out_str
+
+
 def test_column_values():
     """
     Check that the dataframe plot method returns same values with an

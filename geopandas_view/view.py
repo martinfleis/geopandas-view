@@ -137,7 +137,6 @@ def view(
         m is given explicitly, height is ignored.
     categories : list-like
         Ordered list-like object of categories to be used for categorical plot.
-        TODO: not implemented yet
     classification_kwds : dict (default None)
         Keyword arguments to pass to mapclassify
     control_scale : bool, (default True)
@@ -232,12 +231,16 @@ def view(
                 gdf[column_name] = column
                 column = column_name
         elif pd.api.types.is_categorical_dtype(gdf[column]):
+            if categories is not None:
+                raise ValueError(
+                    "Cannot specify 'categories' when column has categorical dtype"
+                )
             categorical = True
-        elif gdf[column].dtype is np.dtype("O"):
+        elif gdf[column].dtype is np.dtype("O") or categories:
             categorical = True
 
     if categorical:
-        cat = pd.Categorical(gdf[column])
+        cat = pd.Categorical(gdf[column], categories=categories)
         cmap = cmap if cmap else "tab20"
 
         # colormap exists in matplotlib
