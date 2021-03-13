@@ -112,6 +112,9 @@ def view(
         If False, cmap will reflect numerical values of the
         column being plotted. For non-numerical columns, this
         will be set to True.
+    legend : bool (default None)
+        Plot a categorical legend in categorical plots.
+        Ignored if no `column` is given, or if `color` is given.
     scheme : str (default None)
         Name of a choropleth classification scheme (requires mapclassify).
         A mapclassify.MapClassifier object will be used
@@ -657,5 +660,5 @@ def _categorical_legend(m, title, categories, colors):
     """
 
     # Add Body
-    body = bc.element.Element(body)
+    body = bc.element.Element(body, "legend")
     m.get_root().html.add_child(body)

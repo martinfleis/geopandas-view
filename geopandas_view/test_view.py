@@ -382,3 +382,18 @@ def test_custom_markers():
         ValueError, match="Only marker, circle, and circle_marker are supported"
     ):
         view(cities, marker_type="dummy")
+
+
+def test_categorical_legend():
+    m = view(world, column="continent", legend=True)
+    out = m.get_root().render()
+    out_str = "".join(out.split())
+
+    assert "#1f77b4'></span>Africa" in out_str
+    assert "#ff7f0e'></span>Antarctica" in out_str
+    assert "#98df8a'></span>Asia" in out_str
+    assert "#9467bd'></span>Europe" in out_str
+    assert "#c49c94'></span>NorthAmerica" in out_str
+    assert "#7f7f7f'></span>Oceania" in out_str
+    assert "#dbdb8d'></span>Sevenseas(openocean)" in out_str
+    assert "#9edae5'></span>SouthAmerica" in out_str
