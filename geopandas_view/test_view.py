@@ -221,7 +221,7 @@ def test_categorical():
 
 def test_categories():
     m = view(
-        nybb,
+        nybb[['BoroName', 'geometry']],
         column="BoroName",
         categories=["Brooklyn", "Staten Island", "Queens", "Bronx", "Manhattan"],
     )
@@ -230,7 +230,7 @@ def test_categories():
     assert '"Manhattan","__folium_color":"#9edae5"' in out_str
     assert '"Brooklyn","__folium_color":"#1f77b4"' in out_str
     assert '"StatenIsland","__folium_color":"#98df8a"' in out_str
-    assert '""Queens","__folium_color":"#8c564b"' in out_str
+    assert '"Queens","__folium_color":"#8c564b"' in out_str
 
 
 def test_column_values():
