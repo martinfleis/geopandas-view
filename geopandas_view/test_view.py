@@ -113,28 +113,20 @@ def test_choropleth_linear():
     # default cmap
     m = view(nybb, column="Shape_Leng")
     out_str = _fetch_map_string(m)
-    assert 'fillColor":"#08519c"' in out_str
-    assert 'fillColor":"#3182bd"' in out_str
-    assert 'fillColor":"#bdd7e7"' in out_str
-    assert 'fillColor":"#eff3ff"' in out_str
+    assert 'color":"#440154"' in out_str
+    assert 'color":"#fde725"' in out_str
+    assert 'color":"#50c46a"' in out_str
+    assert 'color":"#481467"' in out_str
+    assert 'color":"#3d4e8a"' in out_str
 
     # named cmap
     m = view(nybb, column="Shape_Leng", cmap="PuRd")
     out_str = _fetch_map_string(m)
-    assert 'fillColor":"#980043"' in out_str
-    assert 'fillColor":"#dd1c77"' in out_str
-    assert 'fillColor":"#d7b5d8"' in out_str
-    assert 'fillColor":"#f1eef6"' in out_str
-
-    # custom number of bins
-    m = view(nybb, column="Shape_Leng", k=3)
-    out_str = _fetch_map_string(m)
-    assert 'fillColor":"#3182bd"' in out_str
-    assert 'fillColor":"#deebf7"' in out_str
-    assert (
-        "tickValues([330470.010332,519094.6894756666,707719.3686193333,896344.047763])"
-        in out_str
-    )
+    assert 'color":"#f7f4f9"' in out_str
+    assert 'color":"#67001f"' in out_str
+    assert 'color":"#d31760"' in out_str
+    assert 'color":"#f0ecf5"' in out_str
+    assert 'color":"#d6bedc"' in out_str
 
 
 def test_choropleth_mapclassify():
@@ -142,23 +134,26 @@ def test_choropleth_mapclassify():
     # quantiles
     m = view(nybb, column="Shape_Leng", scheme="quantiles")
     out_str = _fetch_map_string(m)
-    assert (
-        "tickValues([330470.010332,353533.27924319997,422355.43368280004,575068.0043608,772133.2280854001,896344.047763])"
-        in out_str
-    )
+    assert 'color":"#21918c"' in out_str
+    assert 'color":"#3b528b"' in out_str
+    assert 'color":"#5ec962"' in out_str
+    assert 'color":"#fde725"' in out_str
+    assert 'color":"#440154"' in out_str
 
     # headtail
     m = view(world, column="pop_est", scheme="headtailbreaks")
     out_str = _fetch_map_string(m)
-    assert (
-        "tickValues([140.0,41712369.84180791,182567501.0,550193675.0,1330619341.0,1379302771.0])"
-        in out_str
-    )
-
+    assert '"color":"#3b528b"' in out_str
+    assert '"color":"#21918c"' in out_str
+    assert '"color":"#5ec962"' in out_str
+    assert '"color":"#fde725"' in out_str
+    assert '"color":"#440154"' in out_str
     # custom k
     m = view(world, column="pop_est", scheme="naturalbreaks", k=3)
     out_str = _fetch_map_string(m)
-    assert "tickValues([140.0,83301151.0,326625791.0,1379302771.0])" in out_str
+    assert '"color":"#21918c"' in out_str
+    assert '"color":"#fde725"' in out_str
+    assert '"color":"#440154"' in out_str
 
 
 def test_categorical():
@@ -398,7 +393,7 @@ def test_custom_markers():
 
     # Unsupported Markers
     with pytest.raises(
-        ValueError, match="Only marker, circle, and circle_marker are supported"
+        ValueError, match="Only 'marker', 'circle', and 'circle_marker' are supported"
     ):
         view(cities, marker_type="dummy")
 
@@ -419,26 +414,16 @@ def test_categorical_legend():
 
 
 def test_vmin_vmax():
-    m = view(world, "gdp_md_est", vmin=-10000000, vmax=100000000)
-    assert (
-        "tickValues([-10000000.0,12000000.0,34000000.0,56000000.0,78000000.0,100000000.0]"
-        in _fetch_map_string(m)
-    )
+    df = world.copy()
+    df["range"] = range(len(df))
+    m = view(df, "range", vmin=-100, vmax=1000)
+    out_str = _fetch_map_string(m)
+    assert 'case"176":return{"color":"#3b528b"}' in out_str
+    assert 'case"119":return{"color":"#414287"}' in out_str
+    assert 'case"3":return{"color":"#482173"}' in out_str
 
-    m = view(world, "gdp_md_est", vmin=-10000000, vmax=100000000, k=3)
-    assert (
-        "tickValues([-10000000.0,26666666.666666664,63333333.33333333,100000000.0]"
-        in _fetch_map_string(m)
-    )
     with pytest.warns(UserWarning, match="vmin' cannot be higher than minimum value"):
-        m = view(world, "gdp_md_est", vmin=100000, k=3)
-        assert (
-            "tickValues([16.0,7046677.333333333,14093338.666666666,21140000.0])"
-            in _fetch_map_string(m)
-        )
+        m = view(df, "range", vmin=100000)
+
     with pytest.warns(UserWarning, match="'vmax' cannot be lower than maximum value"):
-        m = view(world, "gdp_md_est", vmax=100000, k=3)
-        assert (
-            "tickValues([16.0,7046677.333333333,14093338.666666666,21140000.0])"
-            in _fetch_map_string(m)
-        )
+        m = view(df, "range", vmax=10)

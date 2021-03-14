@@ -62,8 +62,10 @@ def view(
     marker_type=None,
     marker_kwds={},
     style_kwds={},
+    missing_kwds={},
     tooltip_kwds={},
     popup_kwds={},
+    legend_kwds={},
     **kwargs,
 ):
     """Interactive map based on GeoPandas and folium/leaflet.js
@@ -223,9 +225,11 @@ def view(
     for map_kwd in _MAP_KWARGS:
         kwargs.pop(map_kwd, None)
 
+    nan_idx = None
+
     if column is not None:
-        if isinstance(column, (np.ndarray, pd.Series)):
-            if column.shape[0] != gdf.shape[0]:
+        if pd.api.types.is_list_like(column):
+            if len(column) != gdf.shape[0]:
                 raise ValueError(
                     "The GeoDataframe and given column have different number of rows."
                 )
@@ -242,138 +246,83 @@ def view(
         elif gdf[column].dtype is np.dtype("O") or categories:
             categorical = True
 
-    if categorical:
-        cat = pd.Categorical(gdf[column], categories=categories)
-        N = len(cat.categories)
-        cmap = cmap if cmap else "tab20"
+        nan_idx = pd.isna(gdf[column])
 
-        # colormap exists in matplotlib
-        if cmap in plt.colormaps():
+        if categorical:
+            cat = pd.Categorical(gdf[column][~nan_idx], categories=categories)
+            N = len(cat.categories)
+            cmap = cmap if cmap else "tab20"
 
-            color = np.apply_along_axis(
-                colors.to_hex, 1, cm.get_cmap(cmap, N)(cat.codes)
-            )
-            legend_colors = np.apply_along_axis(
-                colors.to_hex, 1, cm.get_cmap(cmap, N)(range(N))
-            )
+            # colormap exists in matplotlib
+            if cmap in plt.colormaps():
 
-        # custom list of colors
-        elif pd.api.types.is_list_like(cmap):
-            if N > len(cmap):
-                cmap = cmap * (N // len(cmap) + 1)
-            color = np.take(cmap, cat.codes)
-            legend_colors = np.take(cmap, range(N))
+                color = np.apply_along_axis(
+                    colors.to_hex, 1, cm.get_cmap(cmap, N)(cat.codes)
+                )
+                legend_colors = np.apply_along_axis(
+                    colors.to_hex, 1, cm.get_cmap(cmap, N)(range(N))
+                )
 
+            # custom list of colors
+            elif pd.api.types.is_list_like(cmap):
+                if N > len(cmap):
+                    cmap = cmap * (N // len(cmap) + 1)
+                color = np.take(cmap, cat.codes)
+                legend_colors = np.take(cmap, range(N))
+
+            else:
+                raise ValueError(
+                    "'cmap' is invalid. For categorical plots, pass either valid "
+                    "named matplotlib colormap or a list-like of colors."
+                )
         else:
-            raise ValueError(
-                "'cmap' is invalid. For categorical plots, pass either valid "
-                "named matplotlib colormap or a list-like of colors."
-            )
+            vmin = gdf[column].min() if not vmin else vmin
+            vmax = gdf[column].max() if not vmax else vmax
 
-    if column is None or categorical:
-        _simple(
-            m,
-            gdf,
-            color=color,
-            style_kwds=style_kwds,
-            tooltip=tooltip,
-            tooltip_kwds=tooltip_kwds,
-            popup=popup,
-            popup_kwds=popup_kwds,
-            marker_type=marker_type,
-            marker_kwds=marker_kwds,
-            **kwargs,
-        )
-    else:
-        _choropleth(
-            m,
-            gdf,
-            column=column,
-            cmap=cmap,
-            k=k,
-            scheme=scheme,
-            style_kwds=style_kwds,
-            classification_kwds=classification_kwds,
-            tooltip=tooltip,
-            tooltip_kwds=tooltip_kwds,
-            popup=popup,
-            popup_kwds=popup_kwds,
-            vmin=vmin,
-            vmax=vmax,
-            **kwargs,
-        )
+            if vmin > gdf[column].min():
+                warn(
+                    "'vmin' cannot be higher than minimum value. Setting vmin to minimum.",
+                    UserWarning,
+                    stacklevel=3,
+                )
+                vmin = gdf[column].min()
+            if vmax < gdf[column].max():
+                warn(
+                    "'vmax' cannot be lower than maximum value. Setting vmax to maximum.",
+                    UserWarning,
+                    stacklevel=3,
+                )
+                vmax = gdf[column].max()
 
-    # fit bounds to get a proper zoom level
-    m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+            # get bins
+            if scheme is not None:
 
-    if categorical and legend:
-        _categorical_legend(m, column, cat.categories, legend_colors)
+                if classification_kwds is None:
+                    classification_kwds = {}
+                if "k" not in classification_kwds:
+                    classification_kwds["k"] = k
 
-    return m
+                binning = mapclassify.classify(
+                    np.asarray(gdf[column][~nan_idx]), scheme, **classification_kwds
+                )
+                color = np.apply_along_axis(
+                    colors.to_hex, 1, cm.get_cmap(cmap, k)(binning.yb)
+                )
 
+            else:
 
-def _simple(
-    m,
-    gdf,
-    color=None,
-    style_kwds={},
-    tooltip=False,
-    popup=False,
-    tooltip_kwds={},
-    popup_kwds={},
-    marker_type=None,
-    marker_kwds={},
-    **kwds,
-):
-    """
-    Plot a simple single-color map with tooltip.
+                bins = np.linspace(vmin, vmax, 257)[1:]
+                binning = mapclassify.classify(
+                    np.asarray(gdf[column][~nan_idx]), "UserDefined", bins=bins
+                )
 
-    Parameters
-    ----------
-    m : folium.Map (default None)
-        Existing map instance on which to draw the plot
-    gdf : GeoDataFrame
-        The GeoDataFrame to be viewed.
-    color : str (default None)
-        If specified, all objects will be colored uniformly.
-    style_kwds : dict (default {})
-        Additional style to be passed to folium style_function
-    tooltip : bool, str, int, list (default False)
-        Display GeoDataFrame attributes when hovering over the object.
-        Integer specifies first n columns to be included, ``True`` includes all
-        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
-        column(s). Defaults to ``False``.
-    popup : bool, str, int, list (default False)
-        Input GeoDataFrame attributes for object displayed when clicking.
-        Integer specifies first n columns to be included, ``True`` includes all
-        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
-        column(s). Defaults to ``False``.
-    tooltip_kwds : dict (default {})
-        Additional keywords to be passed to folium.features.GeoJsonTooltip,
-        e.g. ``aliases``, ``labels``, or ``sticky``. See the folium
-        documentation for details:
-        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonTooltip
-    popup_kwds : dict (default {})
-        Additional keywords to be passed to folium.features.GeoJsonPopup,
-        e.g. ``aliases`` or ``labels``. See the folium
-        documentation for details:
-        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
-    marker_type : str, folium.Circle, folium.CircleMarker, folium.Marker (default None)
-        Allowed strings are ('marker', 'circle', 'circle_marker')
-    marker_kwds: dict (default {})
-        Additional keywords to be passed to the selected marker_type
+                color = np.apply_along_axis(
+                    colors.to_hex, 1, cm.get_cmap(cmap, 256)(binning.yb)
+                )
 
-    **kwds : dict
-        Keyword arguments to pass to folium.GeoJson
-    """
-
-    if isinstance(gdf, gpd.GeoDataFrame):
-        # specify fields to show in the tooltip
-        tooltip = _tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds)
-        popup = _tooltip_popup("popup", popup, gdf, **popup_kwds)
-    else:
-        tooltip = None
-        popup = None
+        # we cannot color default 'marker'
+        if marker_type is None:
+            marker_type = "circle"
 
     # specify color
     if color is not None:
@@ -387,7 +336,13 @@ def _simple(
             if isinstance(gdf, gpd.GeoSeries):
                 gdf = gpd.GeoDataFrame(geometry=gdf)
 
-            gdf["__folium_color"] = color
+            if nan_idx is not None and nan_idx.any():
+                nan_color = missing_kwds.pop("color", None)
+
+                gdf["__folium_color"] = nan_color
+                gdf.loc[~nan_idx, "__folium_color"] = color
+            else:
+                gdf["__folium_color"] = color
 
             style_function = lambda x: {
                 "color": x["properties"]["__folium_color"],
@@ -406,8 +361,18 @@ def _simple(
             marker = folium.CircleMarker(**marker_kwds)
         else:
             raise ValueError(
-                "Only marker, circle, and circle_marker are supported as marker values"
+                "Only 'marker', 'circle', and 'circle_marker' are supported as marker values"
             )
+
+    # preprare tooltip and popup
+    if isinstance(gdf, gpd.GeoDataFrame):
+        # specify fields to show in the tooltip
+        tooltip = _tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds)
+        popup = _tooltip_popup("popup", popup, gdf, **popup_kwds)
+    else:
+        tooltip = None
+        popup = None
+
     # add dataframe to map
     folium.GeoJson(
         gdf.__geo_interface__,
@@ -415,138 +380,64 @@ def _simple(
         popup=popup,
         marker=marker,
         style_function=style_function,
-        **kwds,
+        **kwargs,
     ).add_to(m)
 
+    # fit bounds to get a proper zoom level
+    m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
 
-def _choropleth(
-    m,
-    gdf,
-    column=None,
-    cmap=None,
-    style_kwds={},
-    tooltip=False,
-    popup=False,
-    k=5,
-    scheme=None,
-    classification_kwds=None,
-    tooltip_kwds={},
-    popup_kwds={},
-    vmin=None,
-    vmax=None,
-    **kwds,
-):
-    """
-    Plot a choropleth map with tooltip and popup.
+    if legend:
+        # NOTE: overlaps should be resolved in branca https://github.com/python-visualization/branca/issues/88
+        caption = column if not column == "__plottable_column" else ""
+        caption = legend_kwds.pop("caption", caption)
+        if categorical:
+            categories = cat.categories.to_list()
+            legend_colors = legend_colors.tolist()
 
-    Parameters
-    ----------
-    m : folium.Map (default None)
-        Existing map instance on which to draw the plot
-    gdf : GeoDataFrame
-        The GeoDataFrame to be viewed.
-    column : str, np.array, pd.Series (default None)
-        The name of the dataframe column, np.array, or pd.Series to be plotted.
-        If np.array or pd.Series are used then it must have same length as dataframe.
-    cmap : str (default None)
-        The name of a colormap recognized by colorbrewer. Available are:
-        ``["BuGn", "BuPu", "GnBu", "OrRd", "PuBu", "PuBuGn", "PuRd", "RdPu", "YlGn",
-        "YlGnBu", "YlOrBr", "YlOrRd"]``
-    style_kwds : dict (default {})
-        Additional style to be passed to folium style_function
-    tooltip : bool, str, int, list (default False)
-        Display GeoDataFrame attributes when hovering over the object.
-        Integer specifies first n columns to be included, ``True`` includes all
-        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
-        column(s). Defaults to ``False``.
-    popup : bool, str, int, list (default False)
-        Input GeoDataFrame attributes for object displayed when clicking.
-        Integer specifies first n columns to be included, ``True`` includes all
-        columns. ``False`` removes tooltip. Pass string or list of strings to specify a
-        column(s). Defaults to ``False``.
-    k : int (default 5)
-        Number of classes
-    scheme : str (default None)
-        Name of a choropleth classification scheme (requires mapclassify).
-        A mapclassify.MapClassifier object will be used
-        under the hood. Supported are all schemes provided by mapclassify (e.g.
-        'BoxPlot', 'EqualInterval', 'FisherJenks', 'FisherJenksSampled',
-        'HeadTailBreaks', 'JenksCaspall', 'JenksCaspallForced',
-        'JenksCaspallSampled', 'MaxP', 'MaximumBreaks',
-        'NaturalBreaks', 'Quantiles', 'Percentiles', 'StdMean',
-        'UserDefined'). Arguments can be passed in classification_kwds.
-    classification_kwds : dict (default None)
-        Keyword arguments to pass to mapclassify
-    tooltip_kwds : dict (default {})
-        Additional keywords to be passed to folium.features.GeoJsonTooltip,
-        e.g. ``aliases``, ``labels``, or ``sticky``. See the folium
-        documentation for details:
-        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonTooltip
-    popup_kwds : dict (default {})
-        Additional keywords to be passed to folium.features.GeoJsonPopup,
-        e.g. ``aliases`` or ``labels``. See the folium
-        documentation for details:
-        https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
+            if nan_idx.any() and nan_color:
+                categories.append(missing_kwds.pop("label", "NaN"))
+                legend_colors.append(nan_color)
 
-    **kwds : dict
-        Keyword arguments to pass to folium.GeoJson
-    """
+            _categorical_legend(m, caption, categories, legend_colors)
+        elif column is not None:
 
-    gdf["__folium_key"] = range(len(gdf))
+            if scheme:
+                cb_colors = np.apply_along_axis(
+                    colors.to_hex, 1, cm.get_cmap(cmap, binning.k)(range(binning.k))
+                )
+                if legend_kwds.pop("scale", True):
+                    index = [vmin] + binning.bins.tolist()
+                else:
+                    index = None
+                colorbar = bc.colormap.StepColormap(
+                    cb_colors, vmin=vmin, vmax=vmax, caption=caption, index=index
+                )
 
-    # get bins
-    if scheme is not None:
+            else:
+                mp_cmap = cm.get_cmap(cmap)
+                cb_colors = np.apply_along_axis(
+                    colors.to_hex, 1, mp_cmap(range(mp_cmap.N))
+                )
+                # linear legend
+                if mp_cmap.N > 20:
+                    colorbar = bc.colormap.LinearColormap(
+                        cb_colors, vmin=vmin, vmax=vmax, caption=caption
+                    )
 
-        if classification_kwds is None:
-            classification_kwds = {}
-        if "k" not in classification_kwds:
-            classification_kwds["k"] = k
+                # steps
+                else:
+                    colorbar = bc.colormap.StepColormap(
+                        cb_colors, vmin=vmin, vmax=vmax, caption=caption
+                    )
 
-        binning = mapclassify.classify(
-            np.asarray(gdf[column]), scheme, **classification_kwds
-        )
-        bins = binning.bins.tolist()
-        bins.insert(0, gdf[column].min())
+            if nan_idx.any() and nan_color:
+                _categorical_legend(
+                    m, "", [missing_kwds.pop("label", "NaN")], [nan_color]
+                )
 
-    else:
+            m.add_child(colorbar)
 
-        vmin = gdf[column].min() if not vmin else vmin
-        vmax = gdf[column].max() if not vmax else vmax
-        if vmin > gdf[column].min():
-            warn(
-                "'vmin' cannot be higher than minimum value. Setting vmin to minimum.",
-                UserWarning,
-                stacklevel=3,
-            )
-            vmin = gdf[column].min()
-        if vmax < gdf[column].max():
-            warn(
-                "'vmax' cannot be lower than maximum value. Setting vmax to maximum.",
-                UserWarning,
-                stacklevel=3,
-            )
-            vmax = gdf[column].max()
-
-        bins = np.linspace(vmin, vmax, k + 1)
-
-    choro = folium.Choropleth(
-        gdf.__geo_interface__,
-        data=gdf[["__folium_key", column]],
-        key_on="feature.properties.__folium_key",
-        columns=["__folium_key", column],
-        legend_name=column,
-        fill_color=cmap,
-        bins=bins,
-        name=column,
-        **kwds,
-    )
-
-    if tooltip is not False:
-        choro.geojson.add_child(_tooltip_popup("tooltip", tooltip, gdf, **tooltip_kwds))
-    if popup is not False:
-        choro.geojson.add_child(_tooltip_popup("popup", popup, gdf, **popup_kwds))
-
-    choro.add_to(m)
+    return m
 
 
 def _tooltip_popup(type, fields, gdf, **kwds):
@@ -562,10 +453,9 @@ def _tooltip_popup(type, fields, gdf, **kwds):
         elif isinstance(fields, str):
             fields = [fields]
 
-    if "__folium_key" in fields:
-        fields.remove("__folium_key")
-    if "__plottable_column" in fields:
-        fields.remove("__plottable_column")
+    for field in ["__plottable_column", "__folium_color"]:
+        if field in fields:
+            fields.remove(field)
 
     # Cast fields to str
     fields = list(map(str, fields))
