@@ -6,29 +6,9 @@ import pandas as pd
 import geopandas as gpd
 import mapclassify
 import numpy as np
-
-# available named colors
-_BRANCA_COLORS = [
-    "red",
-    "blue",
-    "green",
-    "purple",
-    "orange",
-    "darkred",
-    "lightred",
-    "beige",
-    "darkblue",
-    "darkgreen",
-    "cadetblue",
-    "darkpurple",
-    "white",
-    "pink",
-    "lightblue",
-    "lightgreen",
-    "gray",
-    "black",
-    "lightgray",
-]
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+import matplotlib.pyplot as plt
 
 # available color palettes
 _CB_PALETTES = [
@@ -96,9 +76,10 @@ def view(
         The name of the dataframe column, np.array, or pd.Series to be plotted.
         If np.array or pd.Series are used then it must have same length as dataframe.
     cmap : str (default None)
-        The name of a colormap recognized by colorbrewer. Available are:
+        For non-categorical maps, the name of a colormap recognized by colorbrewer. Available are:
         ``["BuGn", "BuPu", "GnBu", "OrRd", "PuBu", "PuBuGn", "PuRd", "RdPu", "YlGn",
         "YlGnBu", "YlOrBr", "YlOrRd"]``
+        For categorical maps, the name of a matplotlib colormap or a list-like of colors.
     color : str, array-like (default None)
         Named color or array-like of colors (named or hex)
     m : folium.Map (default None)
@@ -155,7 +136,6 @@ def view(
         m is given explicitly, height is ignored.
     categories : list-like
         Ordered list-like object of categories to be used for categorical plot.
-        TODO: not implemented yet
     classification_kwds : dict (default None)
         Keyword arguments to pass to mapclassify
     control_scale : bool, (default True)
@@ -249,19 +229,40 @@ def view(
                 gdf[column_name] = column
                 column = column_name
         elif pd.api.types.is_categorical_dtype(gdf[column]):
+            if categories is not None:
+                raise ValueError(
+                    "Cannot specify 'categories' when column has categorical dtype"
+                )
             categorical = True
-        elif gdf[column].dtype is np.dtype("O"):
+        elif gdf[column].dtype is np.dtype("O") or categories:
             categorical = True
 
     if categorical:
-        cat = pd.Categorical(gdf[column])
-        if len(cat.categories) > len(_BRANCA_COLORS):
-            color = np.take(
-                _BRANCA_COLORS * (len(cat.categories) // len(_BRANCA_COLORS) + 1),
-                cat.codes,
+        cat = pd.Categorical(gdf[column], categories=categories)
+        cmap = cmap if cmap else "tab20"
+
+        # colormap exists in matplotlib
+        if cmap in plt.colormaps():
+
+            color = np.apply_along_axis(
+                colors.to_hex, 1, cm.get_cmap(cmap, len(cat.categories))(cat.codes)
             )
+
+        # custom list of colors
+        elif pd.api.types.is_list_like(cmap):
+            if len(cat.categories) > len(cmap):
+                color = np.take(
+                    cmap * (len(cat.categories) // len(cmap) + 1),
+                    cat.codes,
+                )
+            else:
+                color = np.take(cmap, cat.codes)
+
         else:
-            color = np.take(_BRANCA_COLORS, cat.codes)
+            raise ValueError(
+                "'cmap' is invalid. For categorical plots, pass either valid "
+                "named matplotlib colormap or a list-like of colors."
+            )
 
     if column is None or categorical:
         _simple(

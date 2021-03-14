@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 import folium
 import pytest
+import matplotlib.cm as cm
+import matplotlib.colors as colors
 from geopandas_view import view
-
-from .view import _BRANCA_COLORS
 
 nybb = gpd.read_file(gpd.datasets.get_path("nybb"))
 world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
@@ -166,31 +166,76 @@ def test_categorical():
     # auto detection
     m = view(world, column="continent")
     out_str = _fetch_map_string(m)
-    assert '"color":"darkred"' in out_str
-    assert '"color":"orange"' in out_str
-    assert '"color":"green"' in out_str
-    assert '"color":"beige"' in out_str
-    assert '"color":"red"' in out_str
-    assert '"color":"lightred"' in out_str
-    assert '"color":"blue"' in out_str
-    assert '"color":"purple"' in out_str
+    assert 'color":"#9467bd","continent":"Europe"' in out_str
+    assert 'color":"#c49c94","continent":"NorthAmerica"' in out_str
+    assert 'color":"#1f77b4","continent":"Africa"' in out_str
+    assert 'color":"#98df8a","continent":"Asia"' in out_str
+    assert 'color":"#ff7f0e","continent":"Antarctica"' in out_str
+    assert 'color":"#9edae5","continent":"SouthAmerica"' in out_str
+    assert 'color":"#7f7f7f","continent":"Oceania"' in out_str
+    assert 'color":"#dbdb8d","continent":"Sevenseas(openocean)"' in out_str
 
     # forced categorical
     m = view(nybb, column="BoroCode", categorical=True)
     out_str = _fetch_map_string(m)
-    assert '"color":"orange"' in out_str
-    assert '"color":"green"' in out_str
-    assert '"color":"red"' in out_str
-    assert '"color":"blue"' in out_str
-    assert '"color":"purple"' in out_str
+    assert 'color":"#9edae5"' in out_str
+    assert 'color":"#c7c7c7"' in out_str
+    assert 'color":"#8c564b"' in out_str
+    assert 'color":"#1f77b4"' in out_str
+    assert 'color":"#98df8a"' in out_str
 
     # pandas.Categorical
     df = world.copy()
     df["categorical"] = pd.Categorical(df["name"])
     m = view(df, column="categorical")
     out_str = _fetch_map_string(m)
-    for c in _BRANCA_COLORS:
+    for c in np.apply_along_axis(colors.to_hex, 1, cm.tab20(range(20))):
         assert f'"color":"{c}"' in out_str
+
+    # custom cmap
+    m = view(nybb, column="BoroName", cmap="Set1")
+    out_str = _fetch_map_string(m)
+    assert 'color":"#999999"' in out_str
+    assert 'color":"#a65628"' in out_str
+    assert 'color":"#4daf4a"' in out_str
+    assert 'color":"#e41a1c"' in out_str
+    assert 'color":"#ff7f00"' in out_str
+
+    # custom list of colors
+    cmap = ["#333432", "#3b6e8c", "#bc5b4f", "#8fa37e", "#efc758"]
+    m = view(nybb, column="BoroName", cmap=cmap)
+    out_str = _fetch_map_string(m)
+    for c in cmap:
+        assert f'"color":"{c}"' in out_str
+
+    # shorter list (to make it repeat)
+    cmap = ["#333432", "#3b6e8c"]
+    m = view(nybb, column="BoroName", cmap=cmap)
+    out_str = _fetch_map_string(m)
+    for c in cmap:
+        assert f'"color":"{c}"' in out_str
+
+    with pytest.raises(ValueError, match="'cmap' is invalid."):
+        view(nybb, column="BoroName", cmap="nonsense")
+
+
+def test_categories():
+    m = view(
+        nybb[['BoroName', 'geometry']],
+        column="BoroName",
+        categories=["Brooklyn", "Staten Island", "Queens", "Bronx", "Manhattan"],
+    )
+    out_str = _fetch_map_string(m)
+    assert '"Bronx","__folium_color":"#c7c7c7"' in out_str
+    assert '"Manhattan","__folium_color":"#9edae5"' in out_str
+    assert '"Brooklyn","__folium_color":"#1f77b4"' in out_str
+    assert '"StatenIsland","__folium_color":"#98df8a"' in out_str
+    assert '"Queens","__folium_color":"#8c564b"' in out_str
+
+    df = nybb.copy()
+    df['categorical'] = pd.Categorical(df["BoroName"])
+    with pytest.raises(ValueError, match="Cannot specify 'categories'"):
+        view(df, 'categorical', categories=["Brooklyn", "Staten Island"])
 
 
 def test_column_values():

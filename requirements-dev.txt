@@ -1,6 +1,7 @@
 geopandas
 folium
 mapclassify
+matplotlib
 pytest
 pytest-cov
 codecov
