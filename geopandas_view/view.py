@@ -1,4 +1,5 @@
 from statistics import mean
+from warnings import warn
 
 import folium
 import pandas as pd
@@ -142,12 +143,10 @@ def view(
         Number of classes
     vmin : None or float (default None)
         Minimum value of cmap. If None, the minimum data value
-        in the column to be plotted is used.
-        TODO: not implemented yet
+        in the column to be plotted is used. Cannot be higher than minimum data value.
     vmax : None or float (default None)
         Maximum value of cmap. If None, the maximum data value
-        in the column to be plotted is used.
-        TODO: not implemented yet
+        in the column to be plotted is used. Cannot be lower than maximum data value.
     width : pixel int or percentage string (default: '100%')
         Width of the folium.Map. If the argument
         m is given explicitly, width is ignored.
@@ -204,8 +203,6 @@ def view(
         Folium map instance
 
     """
-    # TODO: folium.LayerControl() - works only after all layers are in
-
     gdf = df.copy()
 
     if gdf.crs is None:
@@ -214,21 +211,19 @@ def view(
     elif not gdf.crs.equals(4326):
         gdf = gdf.to_crs(4326)
 
-    # Get bounds to specify location and map extent
-    bounds = gdf.total_bounds
-    location = kwargs.pop("location", None)
-    if location is None:
-        x = mean([bounds[0], bounds[2]])
-        y = mean([bounds[1], bounds[3]])
-        location = (y, x)
-
-    # get a subset of kwargs to be passed to folium.Map
-    map_kwds = {i: kwargs[i] for i in kwargs.keys() if i in _MAP_KWARGS}
-    for map_kwd in _MAP_KWARGS:
-        kwargs.pop(map_kwd, None)
-
     # create folium.Map object
     if m is None:
+        # Get bounds to specify location and map extent
+        bounds = gdf.total_bounds
+        location = kwargs.pop("location", None)
+        if location is None:
+            x = mean([bounds[0], bounds[2]])
+            y = mean([bounds[1], bounds[3]])
+            location = (y, x)
+
+        # get a subset of kwargs to be passed to folium.Map
+        map_kwds = {i: kwargs[i] for i in kwargs.keys() if i in _MAP_KWARGS}
+
         m = folium.Map(
             location=location,
             control_scale=control_scale,
@@ -239,6 +234,9 @@ def view(
             crs=crs,
             **map_kwds,
         )
+
+    for map_kwd in _MAP_KWARGS:
+        kwargs.pop(map_kwd, None)
 
     if column is not None:
         if isinstance(column, (np.ndarray, pd.Series)):
@@ -285,7 +283,7 @@ def view(
             gdf,
             column=column,
             cmap=cmap,
-            bins=k,
+            k=k,
             scheme=scheme,
             style_kwds=style_kwds,
             classification_kwds=classification_kwds,
@@ -293,6 +291,8 @@ def view(
             tooltip_kwds=tooltip_kwds,
             popup=popup,
             popup_kwds=popup_kwds,
+            vmin=vmin,
+            vmax=vmax,
             **kwargs,
         )
 
@@ -417,11 +417,13 @@ def _choropleth(
     style_kwds={},
     tooltip=False,
     popup=False,
-    bins=5,
+    k=5,
     scheme=None,
     classification_kwds=None,
     tooltip_kwds={},
     popup_kwds={},
+    vmin=None,
+    vmax=None,
     **kwds,
 ):
     """
@@ -452,7 +454,7 @@ def _choropleth(
         Integer specifies first n columns to be included, ``True`` includes all
         columns. ``False`` removes tooltip. Pass string or list of strings to specify a
         column(s). Defaults to ``False``.
-    bins : int (default 5)
+    k : int (default 5)
         Number of classes
     scheme : str (default None)
         Name of a choropleth classification scheme (requires mapclassify).
@@ -488,13 +490,34 @@ def _choropleth(
         if classification_kwds is None:
             classification_kwds = {}
         if "k" not in classification_kwds:
-            classification_kwds["k"] = bins
+            classification_kwds["k"] = k
 
         binning = mapclassify.classify(
             np.asarray(gdf[column]), scheme, **classification_kwds
         )
         bins = binning.bins.tolist()
         bins.insert(0, gdf[column].min())
+
+    else:
+
+        vmin = gdf[column].min() if not vmin else vmin
+        vmax = gdf[column].max() if not vmax else vmax
+        if vmin > gdf[column].min():
+            warn(
+                "'vmin' cannot be higher than minimum value. Setting vmin to minimum.",
+                UserWarning,
+                stacklevel=3,
+            )
+            vmin = gdf[column].min()
+        if vmax < gdf[column].max():
+            warn(
+                "'vmax' cannot be lower than maximum value. Setting vmax to maximum.",
+                UserWarning,
+                stacklevel=3,
+            )
+            vmax = gdf[column].max()
+
+        bins = np.linspace(vmin, vmax, k + 1)
 
     choro = folium.Choropleth(
         gdf.__geo_interface__,
