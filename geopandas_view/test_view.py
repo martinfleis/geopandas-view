@@ -232,6 +232,11 @@ def test_categories():
     assert '"StatenIsland","__folium_color":"#98df8a"' in out_str
     assert '"Queens","__folium_color":"#8c564b"' in out_str
 
+    df = nybb.copy()
+    df['categorical'] = pd.Categorical(df["BoroName"])
+    with pytest.raises(ValueError, match="Cannot specify 'categories'"):
+        view(df, 'categorical', categories=["Brooklyn", "Staten Island"])
+
 
 def test_column_values():
     """
