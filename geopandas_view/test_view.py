@@ -221,7 +221,7 @@ def test_categorical():
 
 def test_categories():
     m = view(
-        nybb[['BoroName', 'geometry']],
+        nybb[["BoroName", "geometry"]],
         column="BoroName",
         categories=["Brooklyn", "Staten Island", "Queens", "Bronx", "Manhattan"],
     )
@@ -233,9 +233,9 @@ def test_categories():
     assert '"Queens","__folium_color":"#8c564b"' in out_str
 
     df = nybb.copy()
-    df['categorical'] = pd.Categorical(df["BoroName"])
+    df["categorical"] = pd.Categorical(df["BoroName"])
     with pytest.raises(ValueError, match="Cannot specify 'categories'"):
-        view(df, 'categorical', categories=["Brooklyn", "Staten Island"])
+        view(df, "categorical", categories=["Brooklyn", "Staten Island"])
 
 
 def test_column_values():
@@ -401,6 +401,21 @@ def test_custom_markers():
         ValueError, match="Only marker, circle, and circle_marker are supported"
     ):
         view(cities, marker_type="dummy")
+
+
+def test_categorical_legend():
+    m = view(world, column="continent", legend=True)
+    out = m.get_root().render()
+    out_str = "".join(out.split())
+
+    assert "#1f77b4'></span>Africa" in out_str
+    assert "#ff7f0e'></span>Antarctica" in out_str
+    assert "#98df8a'></span>Asia" in out_str
+    assert "#9467bd'></span>Europe" in out_str
+    assert "#c49c94'></span>NorthAmerica" in out_str
+    assert "#7f7f7f'></span>Oceania" in out_str
+    assert "#dbdb8d'></span>Sevenseas(openocean)" in out_str
+    assert "#9edae5'></span>SouthAmerica" in out_str
 
 
 def test_vmin_vmax():

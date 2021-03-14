@@ -2,6 +2,7 @@ from statistics import mean
 from warnings import warn
 
 import folium
+import branca as bc
 import pandas as pd
 import geopandas as gpd
 import mapclassify
@@ -47,6 +48,7 @@ def view(
     tooltip=False,
     popup=False,
     categorical=False,
+    legend=None,
     scheme=None,
     k=5,
     vmin=None,
@@ -111,6 +113,9 @@ def view(
         If False, cmap will reflect numerical values of the
         column being plotted. For non-numerical columns, this
         will be set to True.
+    legend : bool (default None)
+        Plot a categorical legend in categorical plots.
+        Ignored if no `column` is given, or if `color` is given.
     scheme : str (default None)
         Name of a choropleth classification scheme (requires mapclassify).
         A mapclassify.MapClassifier object will be used
@@ -239,24 +244,25 @@ def view(
 
     if categorical:
         cat = pd.Categorical(gdf[column], categories=categories)
+        N = len(cat.categories)
         cmap = cmap if cmap else "tab20"
 
         # colormap exists in matplotlib
         if cmap in plt.colormaps():
 
             color = np.apply_along_axis(
-                colors.to_hex, 1, cm.get_cmap(cmap, len(cat.categories))(cat.codes)
+                colors.to_hex, 1, cm.get_cmap(cmap, N)(cat.codes)
+            )
+            legend_colors = np.apply_along_axis(
+                colors.to_hex, 1, cm.get_cmap(cmap, N)(range(N))
             )
 
         # custom list of colors
         elif pd.api.types.is_list_like(cmap):
-            if len(cat.categories) > len(cmap):
-                color = np.take(
-                    cmap * (len(cat.categories) // len(cmap) + 1),
-                    cat.codes,
-                )
-            else:
-                color = np.take(cmap, cat.codes)
+            if N > len(cmap):
+                cmap = cmap * (N // len(cmap) + 1)
+            color = np.take(cmap, cat.codes)
+            legend_colors = np.take(cmap, range(N))
 
         else:
             raise ValueError(
@@ -299,6 +305,9 @@ def view(
 
     # fit bounds to get a proper zoom level
     m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+
+    if categorical and legend:
+        _categorical_legend(m, column, cat.categories, legend_colors)
 
     return m
 
@@ -564,3 +573,118 @@ def _tooltip_popup(type, fields, gdf, **kwds):
         return folium.GeoJsonTooltip(fields, **kwds)
     elif type == "popup":
         return folium.GeoJsonPopup(fields, **kwds)
+
+
+def _categorical_legend(m, title, categories, colors):
+    """
+    Add categorical legend to a map
+
+    The implementation is using the code originally written by Michel Metran
+    (@michelmetran) and released on GitHub
+    (https://github.com/michelmetran/package_folium) under MIT license.
+
+    Copyright (c) 2020 Michel Metran
+
+    Parameters
+    ----------
+    m : folium.Map
+        Existing map instance on which to draw the plot
+    title : str
+        title of the legend (e.g. column name)
+    categories : list-like
+        list of categories
+    colors : list-like
+        list of colors (in the same order as categories)
+    """
+
+    # Header to Add
+    head = """
+    {% macro header(this, kwargs) %}
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script>$( function() {
+        $( ".maplegend" ).draggable({
+            start: function (event, ui) {
+                $(this).css({
+                    right: "auto",
+                    top: "auto",
+                    bottom: "auto"
+                });
+            }
+        });
+    });
+    </script>
+    <style type='text/css'>
+      .maplegend {
+        position: absolute;
+        z-index:9999;
+        background-color: rgba(255, 255, 255, .8);
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        padding: 10px;
+        font: 12px/14px Arial, Helvetica, sans-serif;
+        right: 10px;
+        bottom: 20px;
+      }
+      .maplegend .legend-title {
+        text-align: left;
+        margin-bottom: 5px;
+        font-weight: bold;
+        }
+      .maplegend .legend-scale ul {
+        margin: 0;
+        margin-bottom: 0px;
+        padding: 0;
+        float: left;
+        list-style: none;
+        }
+      .maplegend .legend-scale ul li {
+        list-style: none;
+        margin-left: 0;
+        line-height: 16px;
+        margin-bottom: 2px;
+        }
+      .maplegend ul.legend-labels li span {
+        display: block;
+        float: left;
+        height: 14px;
+        width: 14px;
+        margin-right: 5px;
+        margin-left: 0;
+        border: 0px solid #ccc;
+        }
+      .maplegend .legend-source {
+        color: #777;
+        clear: both;
+        }
+      .maplegend a {
+        color: #777;
+        }
+    </style>
+    {% endmacro %}
+    """
+
+    # Add CSS (on Header)
+    macro = bc.element.MacroElement()
+    macro._template = bc.element.Template(head)
+    m.get_root().add_child(macro)
+
+    body = f"""
+    <div id='maplegend {title}' class='maplegend'>
+        <div class='legend-title'>{title}</div>
+        <div class='legend-scale'>
+            <ul class='legend-labels'>"""
+
+    # Loop Categories
+    for label, color in zip(categories, colors):
+        body += f"""
+                <li><span style='background:{color}'></span>{label}</li>"""
+
+    body += """
+            </ul>
+        </div>
+    </div>
+    """
+
+    # Add Body
+    body = bc.element.Element(body, "legend")
+    m.get_root().html.add_child(body)
