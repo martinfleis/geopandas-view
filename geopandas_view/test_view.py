@@ -10,6 +10,10 @@ from geopandas_view import view
 nybb = gpd.read_file(gpd.datasets.get_path("nybb"))
 world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
 cities = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
+world["range"] = range(len(world))
+missing = world.copy()
+missing.loc[np.random.choice(missing.index, 40), "continent"] = np.nan
+missing.loc[np.random.choice(missing.index, 40), "pop_est"] = np.nan
 
 
 def _fetch_map_string(m):
@@ -113,28 +117,20 @@ def test_choropleth_linear():
     # default cmap
     m = view(nybb, column="Shape_Leng")
     out_str = _fetch_map_string(m)
-    assert 'fillColor":"#08519c"' in out_str
-    assert 'fillColor":"#3182bd"' in out_str
-    assert 'fillColor":"#bdd7e7"' in out_str
-    assert 'fillColor":"#eff3ff"' in out_str
+    assert 'color":"#440154"' in out_str
+    assert 'color":"#fde725"' in out_str
+    assert 'color":"#50c46a"' in out_str
+    assert 'color":"#481467"' in out_str
+    assert 'color":"#3d4e8a"' in out_str
 
     # named cmap
     m = view(nybb, column="Shape_Leng", cmap="PuRd")
     out_str = _fetch_map_string(m)
-    assert 'fillColor":"#980043"' in out_str
-    assert 'fillColor":"#dd1c77"' in out_str
-    assert 'fillColor":"#d7b5d8"' in out_str
-    assert 'fillColor":"#f1eef6"' in out_str
-
-    # custom number of bins
-    m = view(nybb, column="Shape_Leng", k=3)
-    out_str = _fetch_map_string(m)
-    assert 'fillColor":"#3182bd"' in out_str
-    assert 'fillColor":"#deebf7"' in out_str
-    assert (
-        "tickValues([330470.010332,519094.6894756666,707719.3686193333,896344.047763])"
-        in out_str
-    )
+    assert 'color":"#f7f4f9"' in out_str
+    assert 'color":"#67001f"' in out_str
+    assert 'color":"#d31760"' in out_str
+    assert 'color":"#f0ecf5"' in out_str
+    assert 'color":"#d6bedc"' in out_str
 
 
 def test_choropleth_mapclassify():
@@ -142,23 +138,26 @@ def test_choropleth_mapclassify():
     # quantiles
     m = view(nybb, column="Shape_Leng", scheme="quantiles")
     out_str = _fetch_map_string(m)
-    assert (
-        "tickValues([330470.010332,353533.27924319997,422355.43368280004,575068.0043608,772133.2280854001,896344.047763])"
-        in out_str
-    )
+    assert 'color":"#21918c"' in out_str
+    assert 'color":"#3b528b"' in out_str
+    assert 'color":"#5ec962"' in out_str
+    assert 'color":"#fde725"' in out_str
+    assert 'color":"#440154"' in out_str
 
     # headtail
     m = view(world, column="pop_est", scheme="headtailbreaks")
     out_str = _fetch_map_string(m)
-    assert (
-        "tickValues([140.0,41712369.84180791,182567501.0,550193675.0,1330619341.0,1379302771.0])"
-        in out_str
-    )
-
+    assert '"color":"#3b528b"' in out_str
+    assert '"color":"#21918c"' in out_str
+    assert '"color":"#5ec962"' in out_str
+    assert '"color":"#fde725"' in out_str
+    assert '"color":"#440154"' in out_str
     # custom k
     m = view(world, column="pop_est", scheme="naturalbreaks", k=3)
     out_str = _fetch_map_string(m)
-    assert "tickValues([140.0,83301151.0,326625791.0,1379302771.0])" in out_str
+    assert '"color":"#21918c"' in out_str
+    assert '"color":"#fde725"' in out_str
+    assert '"color":"#440154"' in out_str
 
 
 def test_categorical():
@@ -252,20 +251,22 @@ def test_column_values():
     m1_fields = view(world, column=column_array, tooltip=True, popup=True)
     out1_fields_str = _fetch_map_string(m1_fields)
     assert (
-        'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out1_fields_str
+        'fields=["pop_est","continent","name","iso_a3","gdp_md_est","range"]'
+        in out1_fields_str
     )
     assert (
-        'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]'
+        'aliases=["pop_est","continent","name","iso_a3","gdp_md_est","range"]'
         in out1_fields_str
     )
 
     m2_fields = view(world, column=world["pop_est"], tooltip=True, popup=True)
     out2_fields_str = _fetch_map_string(m2_fields)
     assert (
-        'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out2_fields_str
+        'fields=["pop_est","continent","name","iso_a3","gdp_md_est","range"]'
+        in out2_fields_str
     )
     assert (
-        'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]'
+        'aliases=["pop_est","continent","name","iso_a3","gdp_md_est","range"]'
         in out2_fields_str
     )
 
@@ -301,16 +302,26 @@ def test_tooltip():
     assert "GeoJsonTooltip" in str(m.to_dict())
     assert "GeoJsonPopup" in str(m.to_dict())
     out_str = _fetch_map_string(m)
-    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
-    assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
+    assert (
+        'fields=["pop_est","continent","name","iso_a3","gdp_md_est","range"]' in out_str
+    )
+    assert (
+        'aliases=["pop_est","continent","name","iso_a3","gdp_md_est","range"]'
+        in out_str
+    )
 
     # True choropleth
     m = view(world, column="pop_est", tooltip=True, popup=True)
     assert "GeoJsonTooltip" in str(m.to_dict())
     assert "GeoJsonPopup" in str(m.to_dict())
     out_str = _fetch_map_string(m)
-    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
-    assert 'aliases=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
+    assert (
+        'fields=["pop_est","continent","name","iso_a3","gdp_md_est","range"]' in out_str
+    )
+    assert (
+        'aliases=["pop_est","continent","name","iso_a3","gdp_md_est","range"]'
+        in out_str
+    )
 
     # single column
     m = view(world, tooltip="pop_est", popup="iso_a3")
@@ -339,11 +350,13 @@ def test_tooltip():
         world,
         tooltip=True,
         popup=False,
-        tooltip_kwds=dict(aliases=[0, 1, 2, 3, 4], sticky=False),
+        tooltip_kwds=dict(aliases=[0, 1, 2, 3, 4, 5], sticky=False),
     )
     out_str = _fetch_map_string(m)
-    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
-    assert "aliases=[0,1,2,3,4]" in out_str
+    assert (
+        'fields=["pop_est","continent","name","iso_a3","gdp_md_est","range"]' in out_str
+    )
+    assert "aliases=[0,1,2,3,4,5]" in out_str
     assert '"sticky":false' in out_str
 
     # keywords popup
@@ -351,11 +364,13 @@ def test_tooltip():
         world,
         tooltip=False,
         popup=True,
-        popup_kwds=dict(aliases=[0, 1, 2, 3, 4]),
+        popup_kwds=dict(aliases=[0, 1, 2, 3, 4, 5]),
     )
     out_str = _fetch_map_string(m)
-    assert 'fields=["pop_est","continent","name","iso_a3","gdp_md_est"]' in out_str
-    assert "aliases=[0,1,2,3,4]" in out_str
+    assert (
+        'fields=["pop_est","continent","name","iso_a3","gdp_md_est","range"]' in out_str
+    )
+    assert "aliases=[0,1,2,3,4,5]" in out_str
     assert "<th>${aliases[i]" in out_str
 
     # no labels
@@ -398,7 +413,7 @@ def test_custom_markers():
 
     # Unsupported Markers
     with pytest.raises(
-        ValueError, match="Only marker, circle, and circle_marker are supported"
+        ValueError, match="Only 'marker', 'circle', and 'circle_marker' are supported"
     ):
         view(cities, marker_type="dummy")
 
@@ -419,26 +434,105 @@ def test_categorical_legend():
 
 
 def test_vmin_vmax():
-    m = view(world, "gdp_md_est", vmin=-10000000, vmax=100000000)
-    assert (
-        "tickValues([-10000000.0,12000000.0,34000000.0,56000000.0,78000000.0,100000000.0]"
-        in _fetch_map_string(m)
-    )
+    df = world.copy()
+    df["range"] = range(len(df))
+    m = view(df, "range", vmin=-100, vmax=1000)
+    out_str = _fetch_map_string(m)
+    assert 'case"176":return{"color":"#3b528b"}' in out_str
+    assert 'case"119":return{"color":"#414287"}' in out_str
+    assert 'case"3":return{"color":"#482173"}' in out_str
 
-    m = view(world, "gdp_md_est", vmin=-10000000, vmax=100000000, k=3)
-    assert (
-        "tickValues([-10000000.0,26666666.666666664,63333333.33333333,100000000.0]"
-        in _fetch_map_string(m)
-    )
     with pytest.warns(UserWarning, match="vmin' cannot be higher than minimum value"):
-        m = view(world, "gdp_md_est", vmin=100000, k=3)
-        assert (
-            "tickValues([16.0,7046677.333333333,14093338.666666666,21140000.0])"
-            in _fetch_map_string(m)
-        )
+        m = view(df, "range", vmin=100000)
+
     with pytest.warns(UserWarning, match="'vmax' cannot be lower than maximum value"):
-        m = view(world, "gdp_md_est", vmax=100000, k=3)
-        assert (
-            "tickValues([16.0,7046677.333333333,14093338.666666666,21140000.0])"
-            in _fetch_map_string(m)
-        )
+        m = view(df, "range", vmax=10)
+
+
+def test_missing_vals():
+    m = view(missing, "continent")
+    assert '{"color":null}' in _fetch_map_string(m)
+
+    m = view(missing, "pop_est")
+    assert '{"color":null}' in _fetch_map_string(m)
+
+    m = view(missing, "pop_est", missing_kwds=dict(color="red"))
+    assert '{"color":"red"}' in _fetch_map_string(m)
+
+    m = view(missing, "continent", missing_kwds=dict(color="red"))
+    assert '{"color":"red"}' in _fetch_map_string(m)
+
+
+def test_categorical_legend():
+    m = view(world, "continent", legend=True)
+    out_str = _fetch_map_string(m)
+    assert "#1f77b4'></span>Africa" in out_str
+    assert "#ff7f0e'></span>Antarctica" in out_str
+    assert "#98df8a'></span>Asia" in out_str
+    assert "#9467bd'></span>Europe" in out_str
+    assert "#c49c94'></span>NorthAmerica" in out_str
+    assert "#7f7f7f'></span>Oceania" in out_str
+    assert "#dbdb8d'></span>Sevenseas(openocean)" in out_str
+    assert "#9edae5'></span>SouthAmerica" in out_str
+
+    m = view(missing, "continent", legend=True, missing_kwds={"color": "red"})
+    out_str = _fetch_map_string(m)
+    assert "red'></span>NaN" in out_str
+
+
+def test_colorbar():
+    m = view(world, "range", legend=True)
+    out_str = _fetch_map_string(m)
+    assert "attr(\"id\",'legend')" in out_str
+    assert "text('range')" in out_str
+
+    m = view(world, "range", legend=True, legend_kwds=dict(caption="my_caption"))
+    out_str = _fetch_map_string(m)
+    assert "attr(\"id\",'legend')" in out_str
+    assert "text('my_caption')" in out_str
+
+    m = view(missing, "pop_est", legend=True, missing_kwds=dict(color="red"))
+    out_str = _fetch_map_string(m)
+    assert "red'></span>NaN" in out_str
+
+    # do not scale legend
+    m = view(
+        world,
+        "pop_est",
+        legend=True,
+        legend_kwds=dict(scale=False),
+        scheme="Headtailbreaks",
+    )
+    out_str = _fetch_map_string(m)
+    assert out_str.count("#440154ff") == 100
+    assert out_str.count("#3b528bff") == 100
+    assert out_str.count("#21918cff") == 100
+    assert out_str.count("#5ec962ff") == 100
+    assert out_str.count("#fde725ff") == 100
+
+    # scale legend accorrdingly
+    m = view(
+        world,
+        "pop_est",
+        legend=True,
+        scheme="Headtailbreaks",
+    )
+    out_str = _fetch_map_string(m)
+    assert out_str.count("#440154ff") == 16
+    assert out_str.count("#3b528bff") == 51
+    assert out_str.count("#21918cff") == 133
+    assert out_str.count("#5ec962ff") == 282
+    assert out_str.count("#fde725ff") == 18
+
+    # discrete cmap
+    m = view(world, "pop_est", legend=True, cmap="Pastel2")
+    out_str = _fetch_map_string(m)
+
+    assert out_str.count("b3e2cdff") == 63
+    assert out_str.count("fdcdacff") == 62
+    assert out_str.count("cbd5e8ff") == 63
+    assert out_str.count("f4cae4ff") == 62
+    assert out_str.count("e6f5c9ff") == 62
+    assert out_str.count("fff2aeff") == 63
+    assert out_str.count("f1e2ccff") == 62
+    assert out_str.count("ccccccff") == 63
