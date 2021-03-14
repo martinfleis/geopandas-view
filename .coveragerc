@@ -1,0 +1,3 @@
+[report]
+omit =
+    geopandas_view/test_view.py
