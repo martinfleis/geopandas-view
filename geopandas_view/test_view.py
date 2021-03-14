@@ -219,6 +219,25 @@ def test_categorical():
         view(nybb, column="BoroName", cmap="nonsense")
 
 
+def test_categories():
+    m = view(
+        nybb[["BoroName", "geometry"]],
+        column="BoroName",
+        categories=["Brooklyn", "Staten Island", "Queens", "Bronx", "Manhattan"],
+    )
+    out_str = _fetch_map_string(m)
+    assert '"Bronx","__folium_color":"#c7c7c7"' in out_str
+    assert '"Manhattan","__folium_color":"#9edae5"' in out_str
+    assert '"Brooklyn","__folium_color":"#1f77b4"' in out_str
+    assert '"StatenIsland","__folium_color":"#98df8a"' in out_str
+    assert '"Queens","__folium_color":"#8c564b"' in out_str
+
+    df = nybb.copy()
+    df["categorical"] = pd.Categorical(df["BoroName"])
+    with pytest.raises(ValueError, match="Cannot specify 'categories'"):
+        view(df, "categorical", categories=["Brooklyn", "Staten Island"])
+
+
 def test_column_values():
     """
     Check that the dataframe plot method returns same values with an
@@ -397,3 +416,29 @@ def test_categorical_legend():
     assert "#7f7f7f'></span>Oceania" in out_str
     assert "#dbdb8d'></span>Sevenseas(openocean)" in out_str
     assert "#9edae5'></span>SouthAmerica" in out_str
+
+
+def test_vmin_vmax():
+    m = view(world, "gdp_md_est", vmin=-10000000, vmax=100000000)
+    assert (
+        "tickValues([-10000000.0,12000000.0,34000000.0,56000000.0,78000000.0,100000000.0]"
+        in _fetch_map_string(m)
+    )
+
+    m = view(world, "gdp_md_est", vmin=-10000000, vmax=100000000, k=3)
+    assert (
+        "tickValues([-10000000.0,26666666.666666664,63333333.33333333,100000000.0]"
+        in _fetch_map_string(m)
+    )
+    with pytest.warns(UserWarning, match="vmin' cannot be higher than minimum value"):
+        m = view(world, "gdp_md_est", vmin=100000, k=3)
+        assert (
+            "tickValues([16.0,7046677.333333333,14093338.666666666,21140000.0])"
+            in _fetch_map_string(m)
+        )
+    with pytest.warns(UserWarning, match="'vmax' cannot be lower than maximum value"):
+        m = view(world, "gdp_md_est", vmax=100000, k=3)
+        assert (
+            "tickValues([16.0,7046677.333333333,14093338.666666666,21140000.0])"
+            in _fetch_map_string(m)
+        )
