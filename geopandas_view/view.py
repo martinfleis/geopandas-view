@@ -61,10 +61,7 @@ def view(
     crs="EPSG3857",
     marker_type=None,
     marker_kwds={},
-    style_kwds={
-        "fillOpacity": 0.5,
-        "weight": 1
-    },
+    style_kwds={},
     missing_kwds={},
     tooltip_kwds={},
     popup_kwds={},
@@ -327,6 +324,12 @@ def view(
         if marker_type is None:
             marker_type = "circle"
 
+    # set default style
+    if not style_kwds.get("fillOpacity"):
+        style_kwds["fillOpacity"] = 0.5
+    if not style_kwds.get("weight"):
+        style_kwds["weight"] = 1
+
     # specify color
     if color is not None:
         if (
@@ -357,7 +360,7 @@ def view(
             else:
                 style_function = lambda x: {
                     "fillColor": x["properties"]["__folium_color"],
-                    "color": stroke_color
+                    "color": stroke_color,
                     **style_kwds,
                 }
     else:  # use folium default
