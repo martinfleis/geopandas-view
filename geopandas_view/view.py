@@ -61,7 +61,10 @@ def view(
     crs="EPSG3857",
     marker_type=None,
     marker_kwds={},
-    style_kwds={},
+    style_kwds={
+        "fillOpacity": 0.5,
+        "weight": 1
+    },
     missing_kwds={},
     tooltip_kwds={},
     popup_kwds={},
@@ -331,7 +334,7 @@ def view(
             and isinstance(gdf, gpd.GeoDataFrame)
             and color in gdf.columns
         ):  # use existing column
-            style_function = lambda x: {"color": x["properties"][color], **style_kwds}
+            style_function = lambda x: {"fillColor": x["properties"][color], **style_kwds}
         else:  # assign new column
             if isinstance(gdf, gpd.GeoSeries):
                 gdf = gpd.GeoDataFrame(geometry=gdf)
@@ -344,10 +347,19 @@ def view(
             else:
                 gdf["__folium_color"] = color
 
-            style_function = lambda x: {
-                "color": x["properties"]["__folium_color"],
-                **style_kwds,
-            }
+            stroke_color = style_kwds.pop('color', None)
+            if not stroke_color:
+                style_function = lambda x: {
+                    "fillColor": x["properties"]["__folium_color"],
+                    "color": x["properties"]["__folium_color"],
+                    **style_kwds,
+                }
+            else:
+                style_function = lambda x: {
+                    "fillColor": x["properties"]["__folium_color"],
+                    "color": stroke_color
+                    **style_kwds,
+                }
     else:  # use folium default
         style_function = lambda x: {**style_kwds}
 
