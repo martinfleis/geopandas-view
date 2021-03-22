@@ -325,9 +325,9 @@ def view(
             marker_type = "circle"
 
     # set default style
-    if not style_kwds.get("fillOpacity"):
+    if "fillOpacity" not in style_kwds:
         style_kwds["fillOpacity"] = 0.5
-    if not style_kwds.get("weight"):
+    if "weight" not in style_kwds:
         style_kwds["weight"] = 1
 
     # specify color

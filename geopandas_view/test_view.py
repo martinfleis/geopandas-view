@@ -288,6 +288,8 @@ def test_style_kwds():
     m = view(world, style_kwds=dict(fillOpacity=0.1, weight=0.5, fillColor="orange"))
     out_str = _fetch_map_string(m)
     assert '"fillColor":"orange","fillOpacity":0.1,"weight":0.5' in out_str
+    m = view(world, column='pop_est', style_kwds=dict(color="black"))
+    assert '"color":"black"' in _fetch_map_string(m)
 
 
 def test_tooltip():
@@ -493,7 +495,7 @@ def test_colorbar():
 
     m = view(missing, "pop_est", legend=True, missing_kwds=dict(color="red"))
     out_str = _fetch_map_string(m)
-    print("red'></span>NaN" in out_str)
+    assert "red'></span>NaN" in out_str
 
     # do not scale legend
     m = view(
