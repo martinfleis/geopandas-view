@@ -89,14 +89,14 @@ def test_simple_color():
     # single named color
     m = view(nybb, color="red")
     out_str = _fetch_map_string(m)
-    assert '"color":"red"' in out_str
+    assert '"fillColor":"red"' in out_str
 
     # list of colors
     colors = ["#333333", "#367324", "#95824f", "#fcaa00", "#ffcc33"]
     m2 = view(nybb, color=colors)
     out_str = _fetch_map_string(m2)
     for c in colors:
-        assert f'"color":"{c}"' in out_str
+        assert f'"fillColor":"{c}"' in out_str
 
     # column of colors
     df = nybb.copy()
@@ -104,12 +104,12 @@ def test_simple_color():
     m3 = view(df, color="colors")
     out_str = _fetch_map_string(m3)
     for c in colors:
-        assert f'"color":"{c}"' in out_str
+        assert f'"fillColor":"{c}"' in out_str
 
     # line GeoSeries
     m4 = view(nybb.boundary, color="red")
     out_str = _fetch_map_string(m4)
-    assert '"color":"red"' in out_str
+    assert '"fillColor":"red"' in out_str
 
 
 def test_choropleth_linear():
@@ -147,17 +147,17 @@ def test_choropleth_mapclassify():
     # headtail
     m = view(world, column="pop_est", scheme="headtailbreaks")
     out_str = _fetch_map_string(m)
-    assert '"color":"#3b528b"' in out_str
-    assert '"color":"#21918c"' in out_str
-    assert '"color":"#5ec962"' in out_str
-    assert '"color":"#fde725"' in out_str
-    assert '"color":"#440154"' in out_str
+    assert '"fillColor":"#3b528b"' in out_str
+    assert '"fillColor":"#21918c"' in out_str
+    assert '"fillColor":"#5ec962"' in out_str
+    assert '"fillColor":"#fde725"' in out_str
+    assert '"fillColor":"#440154"' in out_str
     # custom k
     m = view(world, column="pop_est", scheme="naturalbreaks", k=3)
     out_str = _fetch_map_string(m)
-    assert '"color":"#21918c"' in out_str
-    assert '"color":"#fde725"' in out_str
-    assert '"color":"#440154"' in out_str
+    assert '"fillColor":"#21918c"' in out_str
+    assert '"fillColor":"#fde725"' in out_str
+    assert '"fillColor":"#440154"' in out_str
 
 
 def test_categorical():
@@ -189,7 +189,7 @@ def test_categorical():
     m = view(df, column="categorical")
     out_str = _fetch_map_string(m)
     for c in np.apply_along_axis(colors.to_hex, 1, cm.tab20(range(20))):
-        assert f'"color":"{c}"' in out_str
+        assert f'"fillColor":"{c}"' in out_str
 
     # custom cmap
     m = view(nybb, column="BoroName", cmap="Set1")
@@ -205,14 +205,14 @@ def test_categorical():
     m = view(nybb, column="BoroName", cmap=cmap)
     out_str = _fetch_map_string(m)
     for c in cmap:
-        assert f'"color":"{c}"' in out_str
+        assert f'"fillColor":"{c}"' in out_str
 
     # shorter list (to make it repeat)
     cmap = ["#333432", "#3b6e8c"]
     m = view(nybb, column="BoroName", cmap=cmap)
     out_str = _fetch_map_string(m)
     for c in cmap:
-        assert f'"color":"{c}"' in out_str
+        assert f'"fillColor":"{c}"' in out_str
 
     with pytest.raises(ValueError, match="'cmap' is invalid."):
         view(nybb, column="BoroName", cmap="nonsense")
@@ -288,6 +288,8 @@ def test_style_kwds():
     m = view(world, style_kwds=dict(fillOpacity=0.1, weight=0.5, fillColor="orange"))
     out_str = _fetch_map_string(m)
     assert '"fillColor":"orange","fillOpacity":0.1,"weight":0.5' in out_str
+    m = view(world, column='pop_est', style_kwds=dict(color="black"))
+    assert '"color":"black"' in _fetch_map_string(m)
 
 
 def test_tooltip():
@@ -438,9 +440,9 @@ def test_vmin_vmax():
     df["range"] = range(len(df))
     m = view(df, "range", vmin=-100, vmax=1000)
     out_str = _fetch_map_string(m)
-    assert 'case"176":return{"color":"#3b528b"}' in out_str
-    assert 'case"119":return{"color":"#414287"}' in out_str
-    assert 'case"3":return{"color":"#482173"}' in out_str
+    assert 'case"176":return{"color":"#3b528b","fillColor":"#3b528b"' in out_str
+    assert 'case"119":return{"color":"#414287","fillColor":"#414287"' in out_str
+    assert 'case"3":return{"color":"#482173","fillColor":"#482173"' in out_str
 
     with pytest.warns(UserWarning, match="vmin' cannot be higher than minimum value"):
         m = view(df, "range", vmin=100000)
@@ -451,16 +453,16 @@ def test_vmin_vmax():
 
 def test_missing_vals():
     m = view(missing, "continent")
-    assert '{"color":null}' in _fetch_map_string(m)
+    assert '"fillColor":null' in _fetch_map_string(m)
 
     m = view(missing, "pop_est")
-    assert '{"color":null}' in _fetch_map_string(m)
+    assert '"fillColor":null' in _fetch_map_string(m)
 
     m = view(missing, "pop_est", missing_kwds=dict(color="red"))
-    assert '{"color":"red"}' in _fetch_map_string(m)
+    assert '"fillColor":"red"' in _fetch_map_string(m)
 
     m = view(missing, "continent", missing_kwds=dict(color="red"))
-    assert '{"color":"red"}' in _fetch_map_string(m)
+    assert '"fillColor":"red"' in _fetch_map_string(m)
 
 
 def test_categorical_legend():
