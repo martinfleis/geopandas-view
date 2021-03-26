@@ -1,5 +1,7 @@
 # geopandas-view
 
+**DISCLAIMER: THIS WILL BECOME AN INTERNAL MODULE OF GEOPANDAS**
+
 Work in progress.
 
 Interactive exploration of GeoPandas GeoDataFrames
