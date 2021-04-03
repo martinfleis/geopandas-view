@@ -1,32 +1,16 @@
 from statistics import mean
 from warnings import warn
 
-import folium
 import branca as bc
-import pandas as pd
+import folium
 import geopandas as gpd
 from shapely.geometry import LineString
 import mapclassify
-import numpy as np
 import matplotlib.cm as cm
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
-
-# available color palettes
-_CB_PALETTES = [
-    "BuGn",
-    "BuPu",
-    "GnBu",
-    "OrRd",
-    "PuBu",
-    "PuBuGn",
-    "PuRd",
-    "RdPu",
-    "YlGn",
-    "YlGnBu",
-    "YlOrBr",
-    "YlOrRd",
-]
+import numpy as np
+import pandas as pd
 
 _MAP_KWARGS = [
     "location",
@@ -81,14 +65,11 @@ def view(
         The name of the dataframe column, np.array, or pd.Series to be plotted.
         If np.array or pd.Series are used then it must have same length as dataframe.
     cmap : str (default None)
-        For non-categorical maps, the name of a colormap recognized by colorbrewer. Available are:
-        ``["BuGn", "BuPu", "GnBu", "OrRd", "PuBu", "PuBuGn", "PuRd", "RdPu", "YlGn",
-        "YlGnBu", "YlOrBr", "YlOrRd"]``
-        For categorical maps, the name of a matplotlib colormap or a list-like of colors.
+        The name of a colormap recognized by matplotlib or a list-like of colors.
     color : str, array-like (default None)
-        Named color or array-like of colors (named or hex)
+        Named color or a list-like of colors (named or hex).
     m : folium.Map (default None)
-        Existing map instance on which to draw the plot
+        Existing map instance on which to draw the plot.
     tiles : str (default 'OpenStreetMap')
         Map tileset to use. Can choose from this list of built-in tiles:
 
@@ -157,7 +138,7 @@ def view(
         Set in by default in Map’s crs option.
         * ``'EPSG4326'`` : A common CRS among
         GIS enthusiasts. Uses simple Equirectangular projection.
-        * ``'EPSG3395'`` : arely used by some commercial tile providers. Uses Elliptical Mercator
+        * ``'EPSG3395'`` : rarely used by some commercial tile providers. Uses Elliptical Mercator
         projection.
         * ``'Simple'`` : A simple CRS that maps longitude and latitude
         into x and y directly. May be used for maps of flat surfaces (e.g. game
@@ -165,11 +146,41 @@ def view(
 
         Note that the CRS of tiles needs to match ``crs``.
     marker_type : str, folium.Circle, folium.CircleMarker, folium.Marker (default None)
-        Allowed strings are ('marker', 'circle', 'circle_marker')
+        Allowed string options are ('marker', 'circle', 'circle_marker')
     marker_kwds: dict (default {})
-        Additional keywords to be passed to the selected marker_type
+        Additional keywords to be passed to the selected ``marker_type``, e.g.:
+
+        radius : float
+            Radius of the circle, in meters (for ``'circle'``) or pixels (for ``circle_marker``).
+        icon : folium.map.Icon
+            the Icon object to use to render the marker.
+            See https://python-visualization.github.io/folium/modules.html#folium.map.Icon.
+        draggable : bool (default False)
+            Set to True to be able to drag the marker around the map.
+
     style_kwds : dict (default {})
-        Additional style to be passed to folium style_function
+        Additional style to be passed to folium style_function:
+
+        stroke : bool (default True)
+            Whether to draw stroke along the path. Set it to False to
+            disable borders on polygons or circles.
+        color : str
+            Stroke color
+        weight : int
+            Stroke width in pixels
+        opacity : float (default 1.0)
+            Stroke opacity
+        fill : boolean (default True)
+            Whether to fill the path with color. Set it to False to
+            disable filling on polygons or circles.
+        fillColor : str
+            Fill color. Defaults to the value of the color option
+        fillOpacity : float (default 0.5)
+            Fill opacity.
+
+        Plus all supported by folium.Path object.
+        See ``folium.vector_layers.path_options()`` for the Path options.
+
     tooltip_kwds : dict (default {})
         Additional keywords to be passed to folium.features.GeoJsonTooltip,
         e.g. ``aliases``, ``labels``, or ``sticky``. See the folium
@@ -180,10 +191,37 @@ def view(
         e.g. ``aliases`` or ``labels``. See the folium
         documentation for details:
         https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
+    legend_kwds : dict (default {})
+        Additional keywords to be passed to the legend.
+
+        Currently supported customisation:
+
+        caption : string
+            Custom caption of the legend. Defaults to the column name.
+
+        Additional accepted keywords when `scheme` is specified:
+
+        colorbar : bool (default True)
+            An option to control the style of the legend. If True, continuous
+            colorbar will be used. If False, categorical legend will be used for bins.
+        scale : bool (default True)
+            Scale bins along the colorbar axis according to the bin edges (True)
+            or use the equal length for each bin (False)
+        fmt : string (default "{:.2f}")
+            A formatting specification for the bin edges of the classes in the
+            legend. For example, to have no decimals: ``{"fmt": "{:.0f}"}``. Applies
+            if ``colorbar=False``.
+        labels : list-like
+            A list of legend labels to override the auto-generated labels.
+            Needs to have the same number of elements as the number of
+            classes (`k`). Applies if ``colorbar=False``.
+        interval : boolean (default False)
+            An option to control brackets from mapclassify legend.
+            If True, open/closed interval brackets are shown in the legend.
+            Applies if ``colorbar=False``.
 
     **kwargs : dict
-        Additional options to be passed on to the folium.Map, folium.GeoJson or
-        folium.Choropleth.
+        Additional options to be passed on to the folium.Map or folium.GeoJson.
 
     Returns
     -------
@@ -427,17 +465,33 @@ def view(
             _categorical_legend(m, caption, categories, legend_colors)
         elif column is not None:
 
+            cbar = legend_kwds.pop("colorbar", True)
             if scheme:
                 cb_colors = np.apply_along_axis(
                     colors.to_hex, 1, cm.get_cmap(cmap, binning.k)(range(binning.k))
                 )
-                if legend_kwds.pop("scale", True):
-                    index = [vmin] + binning.bins.tolist()
+                if cbar:
+                    if legend_kwds.pop("scale", True):
+                        index = [vmin] + binning.bins.tolist()
+                    else:
+                        index = None
+                    colorbar = bc.colormap.StepColormap(
+                        cb_colors, vmin=vmin, vmax=vmax, caption=caption, index=index
+                    )
                 else:
-                    index = None
-                colorbar = bc.colormap.StepColormap(
-                    cb_colors, vmin=vmin, vmax=vmax, caption=caption, index=index
-                )
+                    fmt = legend_kwds.pop("fmt", "{:.2f}")
+                    if "labels" in legend_kwds:
+                        categories = legend_kwds["labels"]
+                    else:
+                        categories = binning.get_legend_classes(fmt)
+                        show_interval = legend_kwds.pop("interval", False)
+                        if not show_interval:
+                            categories = [c[1:-1] for c in categories]
+
+                    if nan_idx.any() and nan_color:
+                        categories.append(missing_kwds.pop("label", "NaN"))
+                        cb_colors = np.append(cb_colors, nan_color)
+                    _categorical_legend(m, caption, categories, cb_colors)
 
             else:
                 mp_cmap = cm.get_cmap(cmap)
@@ -456,12 +510,12 @@ def view(
                         cb_colors, vmin=vmin, vmax=vmax, caption=caption
                     )
 
-            if nan_idx.any() and nan_color:
-                _categorical_legend(
-                    m, "", [missing_kwds.pop("label", "NaN")], [nan_color]
-                )
-
-            m.add_child(colorbar)
+            if cbar:
+                if nan_idx.any() and nan_color:
+                    _categorical_legend(
+                        m, "", [missing_kwds.pop("label", "NaN")], [nan_color]
+                    )
+                m.add_child(colorbar)
 
     return m
 
