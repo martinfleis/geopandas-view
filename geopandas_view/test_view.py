@@ -14,6 +14,7 @@ world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
 cities = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
 world["range"] = range(len(world))
 missing = world.copy()
+np.random.seed(42)
 missing.loc[np.random.choice(missing.index, 40), "continent"] = np.nan
 missing.loc[np.random.choice(missing.index, 40), "pop_est"] = np.nan
 
@@ -551,3 +552,91 @@ def test_providers():
     )
     assert '"attribution":"(C)OpenStreetMapcontributors(C)CARTO"' in out_str
     assert '"maxNativeZoom":19,"maxZoom":19,"minZoom":0' in out_str
+
+def test_linearrings():
+    rings = nybb.explode().exterior
+    m = view(rings)
+    out_str = _fetch_map_string(m)
+
+    assert out_str.count("LineString") == len(rings)
+
+def test_mapclassify_categorical_legend():
+    m = view(
+        missing,
+        column="pop_est",
+        legend=True,
+        scheme="naturalbreaks",
+        missing_kwds=dict(color="red", label="Missing"),
+        legend_kwds=dict(colorbar=False, interval=True),
+    )
+    out_str = _fetch_map_string(m)
+
+    strings = [
+        "[140.00,33986655.00]",
+        "(33986655.00,105350020.00]",
+        "(105350020.00,207353391.00]",
+        "(207353391.00,326625791.00]",
+        "(326625791.00,1379302771.00]",
+        "Missing",
+    ]
+    for s in strings:
+        assert s in out_str
+
+    # interval=False
+    m = view(
+        missing,
+        column="pop_est",
+        legend=True,
+        scheme="naturalbreaks",
+        missing_kwds=dict(color="red", label="Missing"),
+        legend_kwds=dict(colorbar=False, interval=False),
+    )
+    out_str = _fetch_map_string(m)
+
+    strings = [
+        ">140.00,33986655.00",
+        ">33986655.00,105350020.00",
+        ">105350020.00,207353391.00",
+        ">207353391.00,326625791.00",
+        ">326625791.00,1379302771.00",
+        "Missing",
+    ]
+    for s in strings:
+        assert s in out_str
+
+    # custom labels
+    m = view(
+        world,
+        column="pop_est",
+        legend=True,
+        scheme="naturalbreaks",
+        k=5,
+        legend_kwds=dict(colorbar=False, labels=["s", "m", "l", "xl", "xxl"]),
+    )
+    out_str = _fetch_map_string(m)
+
+    strings = [">s<", ">m<", ">l<", ">xl<", ">xxl<"]
+    for s in strings:
+        assert s in out_str
+
+    # fmt
+    m = view(
+        missing,
+        column="pop_est",
+        legend=True,
+        scheme="naturalbreaks",
+        missing_kwds=dict(color="red", label="Missing"),
+        legend_kwds=dict(colorbar=False, fmt="{:.0f}"),
+    )
+    out_str = _fetch_map_string(m)
+
+    strings = [
+        ">140,33986655",
+        ">33986655,105350020",
+        ">105350020,207353391",
+        ">207353391,326625791",
+        ">326625791,1379302771",
+        "Missing",
+    ]
+    for s in strings:
+        assert s in out_str
