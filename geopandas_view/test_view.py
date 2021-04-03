@@ -5,6 +5,7 @@ import folium
 import pytest
 import matplotlib.cm as cm
 import matplotlib.colors as colors
+import contextily
 from geopandas_view import view
 
 nybb = gpd.read_file(gpd.datasets.get_path("nybb"))
@@ -288,7 +289,7 @@ def test_style_kwds():
     m = view(world, style_kwds=dict(fillOpacity=0.1, weight=0.5, fillColor="orange"))
     out_str = _fetch_map_string(m)
     assert '"fillColor":"orange","fillOpacity":0.1,"weight":0.5' in out_str
-    m = view(world, column='pop_est', style_kwds=dict(color="black"))
+    m = view(world, column="pop_est", style_kwds=dict(color="black"))
     assert '"color":"black"' in _fetch_map_string(m)
 
 
@@ -538,3 +539,14 @@ def test_colorbar():
     assert out_str.count("fff2aeff") == 63
     assert out_str.count("f1e2ccff") == 62
     assert out_str.count("ccccccff") == 63
+
+
+def test_providers():
+    m = view(nybb, tiles=contextily.providers.CartoDB.PositronNoLabels)
+    out_str = _fetch_map_string(m)
+
+    assert (
+        '"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"' in out_str
+    )
+    assert '"attribution":"(C)OpenStreetMapcontributors(C)CARTO"' in out_str
+    assert '"maxNativeZoom":19,"maxZoom":19,"minZoom":0' in out_str

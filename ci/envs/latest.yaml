@@ -5,6 +5,7 @@ dependencies:
   - geopandas
   - folium
   - mapclassify
+  - contextily
   - pytest
   - pytest-cov
   - codecov
