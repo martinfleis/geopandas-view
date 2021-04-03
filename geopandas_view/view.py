@@ -11,22 +11,6 @@ import matplotlib.cm as cm
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 
-# available color palettes
-_CB_PALETTES = [
-    "BuGn",
-    "BuPu",
-    "GnBu",
-    "OrRd",
-    "PuBu",
-    "PuBuGn",
-    "PuRd",
-    "RdPu",
-    "YlGn",
-    "YlGnBu",
-    "YlOrBr",
-    "YlOrRd",
-]
-
 _MAP_KWARGS = [
     "location",
     "prefer_canvas",
@@ -80,14 +64,11 @@ def view(
         The name of the dataframe column, np.array, or pd.Series to be plotted.
         If np.array or pd.Series are used then it must have same length as dataframe.
     cmap : str (default None)
-        For non-categorical maps, the name of a colormap recognized by colorbrewer. Available are:
-        ``["BuGn", "BuPu", "GnBu", "OrRd", "PuBu", "PuBuGn", "PuRd", "RdPu", "YlGn",
-        "YlGnBu", "YlOrBr", "YlOrRd"]``
-        For categorical maps, the name of a matplotlib colormap or a list-like of colors.
+        The name of a colormap recognized by matplotlib or a list-like of colors.
     color : str, array-like (default None)
-        Named color or array-like of colors (named or hex)
+        Named color or a list-like of colors (named or hex).
     m : folium.Map (default None)
-        Existing map instance on which to draw the plot
+        Existing map instance on which to draw the plot.
     tiles : str (default 'OpenStreetMap')
         Map tileset to use. Can choose from this list of built-in tiles:
 
@@ -156,7 +137,7 @@ def view(
         Set in by default in Map’s crs option.
         * ``'EPSG4326'`` : A common CRS among
         GIS enthusiasts. Uses simple Equirectangular projection.
-        * ``'EPSG3395'`` : arely used by some commercial tile providers. Uses Elliptical Mercator
+        * ``'EPSG3395'`` : rarely used by some commercial tile providers. Uses Elliptical Mercator
         projection.
         * ``'Simple'`` : A simple CRS that maps longitude and latitude
         into x and y directly. May be used for maps of flat surfaces (e.g. game
