@@ -542,6 +542,13 @@ def test_colorbar():
     assert out_str.count("ccccccff") == 63
 
 
+def test_linearrings():
+    rings = nybb.explode().exterior
+    m = view(rings)
+    out_str = _fetch_map_string(m)
+
+    assert out_str.count("LineString") == len(rings)
+
 def test_mapclassify_categorical_legend():
     m = view(
         missing,

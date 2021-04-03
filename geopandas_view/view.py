@@ -4,6 +4,7 @@ from warnings import warn
 import branca as bc
 import folium
 import geopandas as gpd
+from shapely.geometry import LineString
 import mapclassify
 import matplotlib.cm as cm
 import matplotlib.colors as colors
@@ -229,6 +230,13 @@ def view(
 
     """
     gdf = df.copy()
+
+    # convert LinearRing to LineString
+    rings_mask = df.geom_type == "LinearRing"
+    if rings_mask.any():
+        gdf.geometry[rings_mask] = gdf.geometry[rings_mask].apply(
+            lambda g: LineString(g)
+        )
 
     if gdf.crs is None:
         crs = "Simple"
