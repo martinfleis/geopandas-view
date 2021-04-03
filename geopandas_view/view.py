@@ -5,6 +5,7 @@ import folium
 import branca as bc
 import pandas as pd
 import geopandas as gpd
+from shapely.geometry import LineString
 import mapclassify
 import numpy as np
 import matplotlib.cm as cm
@@ -192,6 +193,13 @@ def view(
     """
     gdf = df.copy()
 
+    # convert LinearRing to LineString
+    rings_mask = df.geom_type == "LinearRing"
+    if rings_mask.any():
+        gdf.geometry[rings_mask] = gdf.geometry[rings_mask].apply(
+            lambda g: LineString(g)
+        )
+
     if gdf.crs is None:
         crs = "Simple"
         tiles = None
@@ -337,7 +345,10 @@ def view(
             and isinstance(gdf, gpd.GeoDataFrame)
             and color in gdf.columns
         ):  # use existing column
-            style_function = lambda x: {"fillColor": x["properties"][color], **style_kwds}
+            style_function = lambda x: {
+                "fillColor": x["properties"][color],
+                **style_kwds,
+            }
         else:  # assign new column
             if isinstance(gdf, gpd.GeoSeries):
                 gdf = gpd.GeoDataFrame(geometry=gdf)
@@ -350,7 +361,7 @@ def view(
             else:
                 gdf["__folium_color"] = color
 
-            stroke_color = style_kwds.pop('color', None)
+            stroke_color = style_kwds.pop("color", None)
             if not stroke_color:
                 style_function = lambda x: {
                     "fillColor": x["properties"]["__folium_color"],

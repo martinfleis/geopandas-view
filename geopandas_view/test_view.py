@@ -288,7 +288,7 @@ def test_style_kwds():
     m = view(world, style_kwds=dict(fillOpacity=0.1, weight=0.5, fillColor="orange"))
     out_str = _fetch_map_string(m)
     assert '"fillColor":"orange","fillOpacity":0.1,"weight":0.5' in out_str
-    m = view(world, column='pop_est', style_kwds=dict(color="black"))
+    m = view(world, column="pop_est", style_kwds=dict(color="black"))
     assert '"color":"black"' in _fetch_map_string(m)
 
 
@@ -538,3 +538,11 @@ def test_colorbar():
     assert out_str.count("fff2aeff") == 63
     assert out_str.count("f1e2ccff") == 62
     assert out_str.count("ccccccff") == 63
+
+
+def test_linearrings():
+    rings = nybb.explode().exterior
+    m = view(rings)
+    out_str = _fetch_map_string(m)
+
+    assert out_str.count("LineString") == len(rings)
