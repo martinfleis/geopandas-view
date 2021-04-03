@@ -1,10 +1,11 @@
-import geopandas as gpd
-import pandas as pd
-import numpy as np
 import folium
-import pytest
+import geopandas as gpd
 import matplotlib.cm as cm
 import matplotlib.colors as colors
+import numpy as np
+import pandas as pd
+import pytest
+
 from geopandas_view import view
 
 nybb = gpd.read_file(gpd.datasets.get_path("nybb"))
