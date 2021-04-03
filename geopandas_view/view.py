@@ -1,15 +1,15 @@
 from statistics import mean
 from warnings import warn
 
-import folium
 import branca as bc
-import pandas as pd
+import folium
 import geopandas as gpd
 import mapclassify
-import numpy as np
 import matplotlib.cm as cm
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 _MAP_KWARGS = [
     "location",
@@ -146,11 +146,41 @@ def view(
 
         Note that the CRS of tiles needs to match ``crs``.
     marker_type : str, folium.Circle, folium.CircleMarker, folium.Marker (default None)
-        Allowed strings are ('marker', 'circle', 'circle_marker')
+        Allowed string options are ('marker', 'circle', 'circle_marker')
     marker_kwds: dict (default {})
-        Additional keywords to be passed to the selected marker_type
+        Additional keywords to be passed to the selected ``marker_type``, e.g.:
+
+        radius : float
+            Radius of the circle, in meters (for ``'circle'``) or pixels (for ``circle_marker``).
+        icon : folium.map.Icon
+            the Icon object to use to render the marker.
+            See https://python-visualization.github.io/folium/modules.html#folium.map.Icon.
+        draggable : bool (default False)
+            Set to True to be able to drag the marker around the map.
+
     style_kwds : dict (default {})
-        Additional style to be passed to folium style_function
+        Additional style to be passed to folium style_function:
+
+        stroke : bool (default True)
+            Whether to draw stroke along the path. Set it to False to
+            disable borders on polygons or circles.
+        color : str
+            Stroke color
+        weight : int
+            Stroke width in pixels
+        opacity : float (default 1.0)
+            Stroke opacity
+        fill : boolean (default True)
+            Whether to fill the path with color. Set it to False to
+            disable filling on polygons or circles.
+        fillColor : str
+            Fill color. Defaults to the value of the color option
+        fillOpacity : float (default 0.5)
+            Fill opacity.
+
+        Plus all supported by folium.Path object.
+        See ``folium.vector_layers.path_options()`` for the Path options.
+
     tooltip_kwds : dict (default {})
         Additional keywords to be passed to folium.features.GeoJsonTooltip,
         e.g. ``aliases``, ``labels``, or ``sticky``. See the folium
@@ -163,8 +193,7 @@ def view(
         https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
 
     **kwargs : dict
-        Additional options to be passed on to the folium.Map, folium.GeoJson or
-        folium.Choropleth.
+        Additional options to be passed on to the folium.Map or folium.GeoJson.
 
     Returns
     -------
