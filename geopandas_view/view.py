@@ -190,6 +190,34 @@ def view(
         e.g. ``aliases`` or ``labels``. See the folium
         documentation for details:
         https://python-visualization.github.io/folium/modules.html#folium.features.GeoJsonPopup
+    legend_kwds : dict (default {})
+        Additional keywords to be passed to the legend.
+
+        Currently supported customisation:
+
+        caption : string
+            Custom caption of the legend. Defaults to the column name.
+
+        Additional accepted keywords when `scheme` is specified:
+
+        colorbar : bool (default True)
+            An option to control the style of the legend. If True, continuous
+            colorbar will be used. If False, categorical legend will be used for bins.
+        scale : bool (default True)
+            Scale bins along the colorbar axis according to the bin edges (True)
+            or use the equal length for each bin (False)
+        fmt : string (default "{:.2f}")
+            A formatting specification for the bin edges of the classes in the
+            legend. For example, to have no decimals: ``{"fmt": "{:.0f}"}``. Applies
+            if ``colorbar=False``.
+        labels : list-like
+            A list of legend labels to override the auto-generated labels.
+            Needs to have the same number of elements as the number of
+            classes (`k`). Applies if ``colorbar=False``.
+        interval : boolean (default False)
+            An option to control brackets from mapclassify legend.
+            If True, open/closed interval brackets are shown in the legend.
+            Applies if ``colorbar=False``.
 
     **kwargs : dict
         Additional options to be passed on to the folium.Map or folium.GeoJson.
@@ -429,17 +457,33 @@ def view(
             _categorical_legend(m, caption, categories, legend_colors)
         elif column is not None:
 
+            cbar = legend_kwds.pop("colorbar", True)
             if scheme:
                 cb_colors = np.apply_along_axis(
                     colors.to_hex, 1, cm.get_cmap(cmap, binning.k)(range(binning.k))
                 )
-                if legend_kwds.pop("scale", True):
-                    index = [vmin] + binning.bins.tolist()
+                if cbar:
+                    if legend_kwds.pop("scale", True):
+                        index = [vmin] + binning.bins.tolist()
+                    else:
+                        index = None
+                    colorbar = bc.colormap.StepColormap(
+                        cb_colors, vmin=vmin, vmax=vmax, caption=caption, index=index
+                    )
                 else:
-                    index = None
-                colorbar = bc.colormap.StepColormap(
-                    cb_colors, vmin=vmin, vmax=vmax, caption=caption, index=index
-                )
+                    fmt = legend_kwds.pop("fmt", "{:.2f}")
+                    if "labels" in legend_kwds:
+                        categories = legend_kwds["labels"]
+                    else:
+                        categories = binning.get_legend_classes(fmt)
+                        show_interval = legend_kwds.pop("interval", False)
+                        if not show_interval:
+                            categories = [c[1:-1] for c in categories]
+
+                    if nan_idx.any() and nan_color:
+                        categories.append(missing_kwds.pop("label", "NaN"))
+                        cb_colors = np.append(cb_colors, nan_color)
+                    _categorical_legend(m, caption, categories, cb_colors)
 
             else:
                 mp_cmap = cm.get_cmap(cmap)
@@ -458,12 +502,12 @@ def view(
                         cb_colors, vmin=vmin, vmax=vmax, caption=caption
                     )
 
-            if nan_idx.any() and nan_color:
-                _categorical_legend(
-                    m, "", [missing_kwds.pop("label", "NaN")], [nan_color]
-                )
-
-            m.add_child(colorbar)
+            if cbar:
+                if nan_idx.any() and nan_color:
+                    _categorical_legend(
+                        m, "", [missing_kwds.pop("label", "NaN")], [nan_color]
+                    )
+                m.add_child(colorbar)
 
     return m
 
