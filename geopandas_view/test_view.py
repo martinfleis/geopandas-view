@@ -640,3 +640,14 @@ def test_mapclassify_categorical_legend():
     ]
     for s in strings:
         assert s in out_str
+
+def test_highlight():
+    m = view(nybb, highlight=True)
+    out_str = _fetch_map_string(m)
+
+    assert '"fillOpacity":0.75' in out_str
+
+    m = view(nybb, highlight=True, highlight_kwds=dict(fillOpacity=1, color='red'))
+    out_str = _fetch_map_string(m)
+    
+    assert '{"color":"red","fillOpacity":1}' in out_str
