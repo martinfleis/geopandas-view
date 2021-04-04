@@ -665,3 +665,40 @@ def test_highlight():
     out_str = _fetch_map_string(m)
     
     assert '{"color":"red","fillOpacity":1}' in out_str
+
+def test_custom_colormaps():
+    import branca
+    from branca.colormap import StepColormap
+
+    step = StepColormap(
+        ['green','yellow','red'],
+        vmin=0,
+        vmax=100000000)
+
+    m = view(world, 'pop_est',cmap=step, tooltip=["name"])
+
+    strings = [
+        'fillColor":"#008000ff"', # Green
+        '"fillColor":"#ffff00ff"', # Yellow
+        '"fillColor":"#ff0000ff"', # Red
+    ]
+
+    for s in strings:
+        assert s in _fetch_map_string(m)
+
+    # Using custom function colormap
+    def my_color_function(field):
+        """Maps low values to green and high values to red."""
+        if field > 100000000:
+            return "#ff0000"
+        else:
+            return "#008000"
+    m = view(world, 'pop_est', cmap=my_color_function)
+
+    strings = [
+        '"color":"#ff0000","fillColor":"#ff0000"',
+        '"color":"#008000","fillColor":"#008000"'
+    ]
+
+    for s in strings:
+        assert s in _fetch_map_string(m)
