@@ -66,9 +66,9 @@ def view(
     column : str, np.array, pd.Series (default None)
         The name of the dataframe column, np.array, or pd.Series to be plotted.
         If np.array or pd.Series are used then it must have same length as dataframe.
-    cmap : str, branca.colormap, self-defined function (default None)
+    cmap : str, branca.colormap, self-defined function fun(column)->str (default None)
         The name of a colormap recognized by matplotlib, a list-like of colors,
-        branca.colormap object or a self-defined function
+        a branca colormap or function that returns a named color or hex based on the column value
     color : str, array-like (default None)
         Named color or a list-like of colors (named or hex).
     m : folium.Map (default None)
@@ -344,6 +344,7 @@ def view(
                 )
 
         elif callable(cmap):
+            # List of colors based on Branca colormaps or self-defined functions
             color = list(map(lambda x: cmap(x), df[column]))
 
         else:
