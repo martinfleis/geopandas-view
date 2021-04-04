@@ -2,7 +2,6 @@ import folium
 import geopandas as gpd
 import matplotlib.cm as cm
 import matplotlib.colors as colors
-import branca
 from branca.colormap import StepColormap
 import contextily
 import numpy as np
