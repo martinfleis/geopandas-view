@@ -32,6 +32,7 @@ def view(
     attr=None,
     tooltip=False,
     popup=False,
+    highlight=False,
     categorical=False,
     legend=None,
     scheme=None,
@@ -47,6 +48,7 @@ def view(
     marker_type=None,
     marker_kwds={},
     style_kwds={},
+    highlight_kwds={},
     missing_kwds={},
     tooltip_kwds={},
     popup_kwds={},
@@ -94,6 +96,8 @@ def view(
         Integer specifies first n columns to be included, ``True`` includes all
         columns. ``False`` removes tooltip. Pass string or list of strings to specify a
         column(s). Defaults to ``False``.
+    highlight : bool (default False)
+        Enable highlight functionality when hovering over a geometry.
     categorical : bool (default False)
         If False, cmap will reflect numerical values of the
         column being plotted. For non-numerical columns, this
@@ -182,6 +186,9 @@ def view(
         Plus all supported by folium.Path object.
         See ``folium.vector_layers.path_options()`` for the Path options.
 
+    highlight_kwds : dict (default {})
+        Style to be passed to folium highlight_function. Uses the same keywords
+        as ``style_kwds``. When empty, defaults to ``{"fillOpacity": 0.75}``.
     tooltip_kwds : dict (default {})
         Additional keywords to be passed to folium.features.GeoJsonTooltip,
         e.g. ``aliases``, ``labels``, or ``sticky``. See the folium
@@ -425,6 +432,13 @@ def view(
     else:  # use folium default
         style_function = lambda x: {**style_kwds}
 
+    if highlight:
+        if not "fillOpacity" in highlight_kwds:
+            highlight_kwds["fillOpacity"] = 0.75
+        highlight_function = lambda x: {**highlight_kwds}
+    else:
+        highlight_function = None
+
     marker = marker_type
     if marker_type is not None and isinstance(marker_type, str):
         if marker_type == "marker":
@@ -454,6 +468,7 @@ def view(
         popup=popup,
         marker=marker,
         style_function=style_function,
+        highlight_function=highlight_function,
         **kwargs,
     ).add_to(m)
 
