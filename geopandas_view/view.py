@@ -285,6 +285,9 @@ def view(
             **map_kwds,
         )
 
+        # fit bounds to get a proper zoom level
+        m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+
     for map_kwd in _MAP_KWARGS:
         kwargs.pop(map_kwd, None)
 
@@ -471,9 +474,6 @@ def view(
         highlight_function=highlight_function,
         **kwargs,
     ).add_to(m)
-
-    # fit bounds to get a proper zoom level
-    m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
 
     if legend:
         # NOTE: overlaps should be resolved in branca https://github.com/python-visualization/branca/issues/88

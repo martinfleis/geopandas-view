@@ -553,12 +553,14 @@ def test_providers():
     assert '"attribution":"(C)OpenStreetMapcontributors(C)CARTO"' in out_str
     assert '"maxNativeZoom":19,"maxZoom":19,"minZoom":0' in out_str
 
+
 def test_linearrings():
     rings = nybb.explode().exterior
     m = view(rings)
     out_str = _fetch_map_string(m)
 
     assert out_str.count("LineString") == len(rings)
+
 
 def test_mapclassify_categorical_legend():
     m = view(
@@ -640,6 +642,18 @@ def test_mapclassify_categorical_legend():
     ]
     for s in strings:
         assert s in out_str
+
+
+def test_given_m():
+    "Check that geometry is mapped onto a given folium.Map"
+    m = folium.Map()
+    view(nybb, m=m)
+
+    out_str = _fetch_map_string(m)
+
+    assert out_str.count("BoroCode") == 5
+    # should not change map settings
+    assert m.options["zoom"] == 1
 
 def test_highlight():
     m = view(nybb, highlight=True)
