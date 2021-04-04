@@ -2,6 +2,8 @@ import folium
 import geopandas as gpd
 import matplotlib.cm as cm
 import matplotlib.colors as colors
+import branca
+from branca.colormap import StepColormap
 import contextily
 import numpy as np
 import pandas as pd
@@ -667,8 +669,6 @@ def test_highlight():
     assert '{"color":"red","fillOpacity":1}' in out_str
 
 def test_custom_colormaps():
-    import branca
-    from branca.colormap import StepColormap
 
     step = StepColormap(
         ['green','yellow','red'],
