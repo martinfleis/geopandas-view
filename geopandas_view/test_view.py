@@ -654,3 +654,14 @@ def test_given_m():
     assert out_str.count("BoroCode") == 5
     # should not change map settings
     assert m.options["zoom"] == 1
+
+def test_highlight():
+    m = view(nybb, highlight=True)
+    out_str = _fetch_map_string(m)
+
+    assert '"fillOpacity":0.75' in out_str
+
+    m = view(nybb, highlight=True, highlight_kwds=dict(fillOpacity=1, color='red'))
+    out_str = _fetch_map_string(m)
+    
+    assert '{"color":"red","fillOpacity":1}' in out_str
