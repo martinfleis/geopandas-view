@@ -2,6 +2,7 @@ import folium
 import geopandas as gpd
 import matplotlib.cm as cm
 import matplotlib.colors as colors
+import contextily
 import numpy as np
 import pandas as pd
 import pytest
@@ -541,6 +542,16 @@ def test_colorbar():
     assert out_str.count("f1e2ccff") == 62
     assert out_str.count("ccccccff") == 63
 
+
+def test_providers():
+    m = view(nybb, tiles=contextily.providers.CartoDB.PositronNoLabels)
+    out_str = _fetch_map_string(m)
+
+    assert (
+        '"https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"' in out_str
+    )
+    assert '"attribution":"(C)OpenStreetMapcontributors(C)CARTO"' in out_str
+    assert '"maxNativeZoom":19,"maxZoom":19,"minZoom":0' in out_str
 
 def test_linearrings():
     rings = nybb.explode().exterior

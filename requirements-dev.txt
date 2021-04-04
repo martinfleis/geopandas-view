@@ -2,6 +2,7 @@ geopandas
 folium
 mapclassify
 matplotlib
+contextily
 pytest
 pytest-cov
 codecov
