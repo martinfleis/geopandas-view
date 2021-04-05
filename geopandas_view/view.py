@@ -68,7 +68,12 @@ def view(
         If np.array or pd.Series are used then it must have same length as dataframe.
     cmap : str, branca.colormap, self-defined function fun(column)->str (default None)
         The name of a colormap recognized by matplotlib, a list-like of colors,
-        a branca colormap or function that returns a named color or hex based on the column value
+        a branca colormap or function that returns a named color or hex based on the column
+        value, e.g.:
+            def my_colormap(value):  # scalar value defined in 'column'
+                if value > 1:
+                    return "green"
+                return "red"
     color : str, array-like (default None)
         Named color or a list-like of colors (named or hex).
     m : folium.Map (default None)
