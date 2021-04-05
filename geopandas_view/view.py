@@ -66,8 +66,14 @@ def view(
     column : str, np.array, pd.Series (default None)
         The name of the dataframe column, np.array, or pd.Series to be plotted.
         If np.array or pd.Series are used then it must have same length as dataframe.
-    cmap : str (default None)
-        The name of a colormap recognized by matplotlib or a list-like of colors.
+    cmap : str, branca.colormap, self-defined function fun(column)->str (default None)
+        The name of a colormap recognized by matplotlib, a list-like of colors,
+        a branca colormap or function that returns a named color or hex based on the column
+        value, e.g.:
+            def my_colormap(value):  # scalar value defined in 'column'
+                if value > 1:
+                    return "green"
+                return "red"
     color : str, array-like (default None)
         Named color or a list-like of colors (named or hex).
     m : folium.Map (default None)
@@ -341,6 +347,11 @@ def view(
                     "'cmap' is invalid. For categorical plots, pass either valid "
                     "named matplotlib colormap or a list-like of colors."
                 )
+
+        elif callable(cmap):
+            # List of colors based on Branca colormaps or self-defined functions
+            color = list(map(lambda x: cmap(x), df[column]))
+
         else:
             vmin = gdf[column].min() if not vmin else vmin
             vmax = gdf[column].max() if not vmax else vmax
