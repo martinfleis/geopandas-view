@@ -19,6 +19,7 @@ _MAP_KWARGS = [
     "disable_3d",
     "png_enabled",
     "zoom_control",
+    "crs",
 ]
 
 
@@ -44,7 +45,6 @@ def view(
     categories=None,
     classification_kwds=None,
     control_scale=True,
-    crs="EPSG3857",
     marker_type=None,
     marker_kwds={},
     style_kwds={},
@@ -140,22 +140,6 @@ def view(
         Keyword arguments to pass to mapclassify
     control_scale : bool, (default True)
         Whether to add a control scale on the map.
-    crs : str (default "EPSG3857")
-        Defines coordinate reference systems for projecting geographical points
-        into pixel (screen) coordinates and back. You can use Leaflet’s values :
-
-        * ``'EPSG3857'`` : The most common CRS for online maps, used by almost all
-        free and commercial tile providers. Uses Spherical Mercator projection.
-        Set in by default in Map’s crs option.
-        * ``'EPSG4326'`` : A common CRS among
-        GIS enthusiasts. Uses simple Equirectangular projection.
-        * ``'EPSG3395'`` : rarely used by some commercial tile providers. Uses Elliptical Mercator
-        projection.
-        * ``'Simple'`` : A simple CRS that maps longitude and latitude
-        into x and y directly. May be used for maps of flat surfaces (e.g. game
-        maps).
-
-        Note that the CRS of tiles needs to match ``crs``.
     marker_type : str, folium.Circle, folium.CircleMarker, folium.Marker (default None)
         Allowed string options are ('marker', 'circle', 'circle_marker')
     marker_kwds: dict (default {})
@@ -287,7 +271,6 @@ def view(
             attr=attr,
             width=width,
             height=height,
-            crs=crs,
             **map_kwds,
         )
 
