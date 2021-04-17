@@ -478,7 +478,7 @@ def view(
 
     # add dataframe to map
     folium.GeoJson(
-        gdf.__geo_interface__,
+        gdf.to_json(),
         tooltip=tooltip,
         popup=popup,
         marker=marker,
