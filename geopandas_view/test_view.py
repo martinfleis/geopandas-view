@@ -87,6 +87,21 @@ def test_map_settings_custom():
         in out_str
     )
 
+    m = view(nybb, location=(40, 5))
+    assert m.location == [40, 5]
+    assert m.options["zoom"] == 10
+
+    m = view(nybb, zoom_start=8)
+    assert m.location == [
+        pytest.approx(40.70582377450201, rel=1e-6),
+        pytest.approx(-73.9778006856748, rel=1e-6),
+    ]
+    assert m.options["zoom"] == 8
+
+    m = view(nybb, location=(40, 5), zoom_start=8)
+    assert m.location == [40, 5]
+    assert m.options["zoom"] == 8
+
 
 def test_simple_color():
     """Check color settings"""
@@ -656,30 +671,29 @@ def test_given_m():
     # should not change map settings
     assert m.options["zoom"] == 1
 
+
 def test_highlight():
     m = view(nybb, highlight=True)
     out_str = _fetch_map_string(m)
 
     assert '"fillOpacity":0.75' in out_str
 
-    m = view(nybb, highlight=True, highlight_kwds=dict(fillOpacity=1, color='red'))
+    m = view(nybb, highlight=True, highlight_kwds=dict(fillOpacity=1, color="red"))
     out_str = _fetch_map_string(m)
-    
+
     assert '{"color":"red","fillOpacity":1}' in out_str
+
 
 def test_custom_colormaps():
 
-    step = StepColormap(
-        ['green','yellow','red'],
-        vmin=0,
-        vmax=100000000)
+    step = StepColormap(["green", "yellow", "red"], vmin=0, vmax=100000000)
 
-    m = view(world, 'pop_est',cmap=step, tooltip=["name"])
+    m = view(world, "pop_est", cmap=step, tooltip=["name"])
 
     strings = [
-        'fillColor":"#008000ff"', # Green
-        '"fillColor":"#ffff00ff"', # Yellow
-        '"fillColor":"#ff0000ff"', # Red
+        'fillColor":"#008000ff"',  # Green
+        '"fillColor":"#ffff00ff"',  # Yellow
+        '"fillColor":"#ff0000ff"',  # Red
     ]
 
     for s in strings:
@@ -692,11 +706,12 @@ def test_custom_colormaps():
             return "#ff0000"
         else:
             return "#008000"
-    m = view(world, 'pop_est', cmap=my_color_function)
+
+    m = view(world, "pop_est", cmap=my_color_function)
 
     strings = [
         '"color":"#ff0000","fillColor":"#ff0000"',
-        '"color":"#008000","fillColor":"#008000"'
+        '"color":"#008000","fillColor":"#008000"',
     ]
 
     for s in strings:

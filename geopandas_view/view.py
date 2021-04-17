@@ -20,6 +20,17 @@ _MAP_KWARGS = [
     "png_enabled",
     "zoom_control",
     "crs",
+    "zoom_start",
+    "left",
+    "top",
+    "position",
+    "min_zoom",
+    "max_zoom",
+    "min_lat",
+    "max_lat",
+    "min_lon",
+    "max_lon",
+    "max_bounds",
 ]
 
 
@@ -251,6 +262,12 @@ def view(
             x = mean([bounds[0], bounds[2]])
             y = mean([bounds[1], bounds[3]])
             location = (y, x)
+            if "zoom_start" in kwargs.keys():
+                fit = False
+            else:
+                fit = True
+        else:
+            fit = False
 
         # get a subset of kwargs to be passed to folium.Map
         map_kwds = {i: kwargs[i] for i in kwargs.keys() if i in _MAP_KWARGS}
@@ -275,7 +292,8 @@ def view(
         )
 
         # fit bounds to get a proper zoom level
-        m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+        if fit:
+            m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
 
     for map_kwd in _MAP_KWARGS:
         kwargs.pop(map_kwd, None)
