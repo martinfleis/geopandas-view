@@ -531,21 +531,25 @@ def view(
                     _categorical_legend(m, caption, categories, cb_colors)
 
             else:
-                mp_cmap = cm.get_cmap(cmap)
-                cb_colors = np.apply_along_axis(
-                    colors.to_hex, 1, mp_cmap(range(mp_cmap.N))
-                )
-                # linear legend
-                if mp_cmap.N > 20:
-                    colorbar = bc.colormap.LinearColormap(
-                        cb_colors, vmin=vmin, vmax=vmax, caption=caption
-                    )
-
-                # steps
+                if isinstance(cmap, bc.colormap.ColorMap):
+                    colorbar = cmap
                 else:
-                    colorbar = bc.colormap.StepColormap(
-                        cb_colors, vmin=vmin, vmax=vmax, caption=caption
+
+                    mp_cmap = cm.get_cmap(cmap)
+                    cb_colors = np.apply_along_axis(
+                        colors.to_hex, 1, mp_cmap(range(mp_cmap.N))
                     )
+                    # linear legend
+                    if mp_cmap.N > 20:
+                        colorbar = bc.colormap.LinearColormap(
+                            cb_colors, vmin=vmin, vmax=vmax, caption=caption
+                        )
+
+                    # steps
+                    else:
+                        colorbar = bc.colormap.StepColormap(
+                            cb_colors, vmin=vmin, vmax=vmax, caption=caption
+                        )
 
             if cbar:
                 if nan_idx.any() and nan_color:
