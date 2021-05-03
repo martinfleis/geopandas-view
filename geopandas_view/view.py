@@ -42,11 +42,11 @@ def view(
     m=None,
     tiles="OpenStreetMap",
     attr=None,
-    tooltip=False,
+    tooltip=True,
     popup=False,
-    highlight=False,
+    highlight=True,
     categorical=False,
-    legend=None,
+    legend=True,
     scheme=None,
     k=5,
     vmin=None,
@@ -103,25 +103,25 @@ def view(
         to check their terms and conditions and to provide attribution with the attr keyword.
     attr : str (default None)
         Map tile attribution; only required if passing custom tile URL.
-    tooltip : bool, str, int, list (default False)
+    tooltip : bool, str, int, list (default True)
         Display GeoDataFrame attributes when hovering over the object.
         Integer specifies first n columns to be included, ``True`` includes all
         columns. ``False`` removes tooltip. Pass string or list of strings to specify a
-        column(s). Defaults to ``False``.
+        column(s). Defaults to ``True``.
     popup : bool, str, int, list (default False)
         Input GeoDataFrame attributes for object displayed when clicking.
         Integer specifies first n columns to be included, ``True`` includes all
         columns. ``False`` removes tooltip. Pass string or list of strings to specify a
         column(s). Defaults to ``False``.
-    highlight : bool (default False)
+    highlight : bool (default True)
         Enable highlight functionality when hovering over a geometry.
     categorical : bool (default False)
         If False, cmap will reflect numerical values of the
         column being plotted. For non-numerical columns, this
         will be set to True.
-    legend : bool (default None)
-        Plot a categorical legend in categorical plots.
-        Ignored if no `column` is given, or if `color` is given.
+    legend : bool (default True)
+        Plot a legend in choropleth plots.
+        Ignored if no `column` is given.
     scheme : str (default None)
         Name of a choropleth classification scheme (requires mapclassify).
         A mapclassify.MapClassifier object will be used
@@ -406,7 +406,7 @@ def view(
     if "fillOpacity" not in style_kwds:
         style_kwds["fillOpacity"] = 0.5
     if "weight" not in style_kwds:
-        style_kwds["weight"] = 1
+        style_kwds["weight"] = 2
 
     # specify color
     if color is not None:

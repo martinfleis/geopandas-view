@@ -315,7 +315,7 @@ def test_tooltip():
     """Test tooltip"""
     # default with no tooltip or popup
     m = view(world)
-    assert "GeoJsonTooltip" not in str(m.to_dict())
+    assert "GeoJsonTooltip" in str(m.to_dict())
     assert "GeoJsonPopup" not in str(m.to_dict())
 
     # True
@@ -663,7 +663,7 @@ def test_mapclassify_categorical_legend():
 def test_given_m():
     "Check that geometry is mapped onto a given folium.Map"
     m = folium.Map()
-    view(nybb, m=m)
+    view(nybb, m=m, tooltip=False, highlight=False)
 
     out_str = _fetch_map_string(m)
 
@@ -712,7 +712,7 @@ def test_custom_colormaps():
         else:
             return "#008000"
 
-    m = view(world, "pop_est", cmap=my_color_function)
+    m = view(world, "pop_est", cmap=my_color_function, legend=False)
 
     strings = [
         '"color":"#ff0000","fillColor":"#ff0000"',
