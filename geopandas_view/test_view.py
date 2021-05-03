@@ -707,7 +707,7 @@ def test_custom_colormaps():
         else:
             return "#008000"
 
-    m = view(world, "pop_est", cmap=my_color_function)
+    m = view(world, "pop_est", cmap=my_color_function, legend=False)
 
     strings = [
         '"color":"#ff0000","fillColor":"#ff0000"',
