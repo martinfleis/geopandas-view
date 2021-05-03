@@ -688,7 +688,7 @@ def test_custom_colormaps():
 
     step = StepColormap(["green", "yellow", "red"], vmin=0, vmax=100000000)
 
-    m = view(world, "pop_est", cmap=step, tooltip=["name"])
+    m = view(world, "pop_est", cmap=step, tooltip=["name"], legend=True)
 
     strings = [
         'fillColor":"#008000ff"',  # Green
@@ -696,8 +696,13 @@ def test_custom_colormaps():
         '"fillColor":"#ff0000ff"',  # Red
     ]
 
+    out_str = _fetch_map_string(m)
     for s in strings:
-        assert s in _fetch_map_string(m)
+        assert s in out_str
+
+    assert out_str.count("008000ff") == 306
+    assert out_str.count("ffff00ff") == 187
+    assert out_str.count("ff0000ff") == 190
 
     # Using custom function colormap
     def my_color_function(field):
