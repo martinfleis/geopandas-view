@@ -77,8 +77,8 @@ def view(
     column : str, np.array, pd.Series (default None)
         The name of the dataframe column, np.array, or pd.Series to be plotted.
         If np.array or pd.Series are used then it must have same length as dataframe.
-    cmap : str, branca.colormap, self-defined function fun(column)->str (default None)
-        The name of a colormap recognized by matplotlib, a list-like of colors,
+    cmap : str, matplotlib.Colormap, branca.colormap, self-defined function fun(column)->str (default None)
+        The name of a colormap recognized by matplotlib, a list-like of colors, matplotlib.Colormap, 
         a branca colormap or function that returns a named color or hex based on the column
         value, e.g.:
             def my_colormap(value):  # scalar value defined in 'column'
@@ -335,6 +335,11 @@ def view(
                 legend_colors = np.apply_along_axis(
                     colors.to_hex, 1, cm.get_cmap(cmap, N)(range(N))
                 )
+
+            # colormap is matplotlib.Colormap
+            elif isinstance(cmap, colors.Colormap):
+                color = np.apply_along_axis(colors.to_hex, 1, cmap(cat.codes))
+                legend_colors = np.apply_along_axis(colors.to_hex, 1, cmap(range(N)))
 
             # custom list of colors
             elif pd.api.types.is_list_like(cmap):
