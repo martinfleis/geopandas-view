@@ -721,3 +721,19 @@ def test_custom_colormaps():
 
     for s in strings:
         assert s in _fetch_map_string(m)
+
+    # matplotlib.Colormap
+    cmap = colors.ListedColormap(["red", "green", "blue", "white", "black"])
+
+    m = view(nybb, "BoroName", cmap=cmap)
+    strings = [
+        '"fillColor":"#ff0000"',  # Red
+        '"fillColor":"#008000"',  # Green
+        '"fillColor":"#0000ff"',  # Blue
+        '"fillColor":"#ffffff"',  # White
+        '"fillColor":"#000000"',  # Black
+    ]
+
+    out_str = _fetch_map_string(m)
+    for s in strings:
+        assert s in out_str
