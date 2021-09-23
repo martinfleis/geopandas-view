@@ -1,8 +1,10 @@
 # geopandas-view
 
-**DISCLAIMER: THIS WILL BECOME AN INTERNAL MODULE OF GEOPANDAS**
+**DISCLAIMER: THIS HAS BECOME AN INTERNAL MODULE OF GEOPANDAS:**
 
-Work in progress.
+```py
+gdf.explore()
+```
 
 Interactive exploration of GeoPandas GeoDataFrames
 
